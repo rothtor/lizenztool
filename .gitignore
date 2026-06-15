@@ -1,0 +1,25 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Secrets / lokale Konfiguration — nie ins Repo!
+# lizenztool.toml enthält ggf. API-Schlüssel; nur einchecken wenn KEINE Keys drin stehen
+# lizenztool.toml
+
+# Backups / Archive
+*.tar.gz
+*.zip
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

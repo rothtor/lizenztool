@@ -1,0 +1,18 @@
+# Replace example.com with your domain.
+# Caddy obtains a Let's Encrypt certificate automatically on first start.
+# For local testing without a domain use ":8080" instead.
+
+example.com {
+    reverse_proxy app:8000 {
+        # Replace client-controlled header so rate limiting cannot be spoofed
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # Limit upload body size at the proxy level (must match MAX_UPLOAD_MB + headroom)
+    request_body {
+        max_size 25MB
+    }
+
+    header -Server
+    header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://commons.wikimedia.org; img-src 'self' blob: data:"
+}

@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lizenztool</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #ffffff;
+  --fg:        #1a2744;
+  --accent:    #8c1a26;
+  --accent-h:  #6e1320;
+  --muted:     #6b7280;
+  --border:    #e5e7eb;
+  --border-d:  #d1d5db;
+  --card:      #ffffff;
+  --cc-bg:     #f5f7ff;
+  --cc-border: #dde3f5;
+  --shadow:    0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.06);
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  padding: 3rem 1rem 6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+h1 {
+  font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  font-size: clamp(2.8rem, 7vw, 4.5rem);
+  font-weight: 300;
+  letter-spacing: 6px;
+  color: var(--fg);
+  line-height: 1;
+}
+
+/* ── Grid ────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 880px;
+  align-items: stretch;
+}
+@media (max-width: 660px) { .grid { grid-template-columns: 1fr; } }
+
+/* ── Panel ───────────────────────────────────────── */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.panel-label {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1rem;
+  display: block;
+}
+
+/* ── Drop zone ───────────────────────────────────── */
+#dropzone {
+  border: 1.5px dashed var(--border-d);
+  border-radius: 10px;
+  padding: 1.1rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-height: 58px;
+}
+#dropzone:hover, #dropzone.dragover { border-color: var(--accent); background: #fdf7f7; }
+#dropzone.has-file { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+#dropzone .dz-hint { font-size: .85rem; flex: 1; text-align: left; }
+.dz-filename {
+  font-weight: 600;
+  font-size: .82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+
+/* ── Canvas preview ──────────────────────────────── */
+.canvas-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: .9rem;
+  min-height: 0;
+}
+#preview-canvas {
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+  flex: 1;
+  min-height: 0;
+  object-fit: contain;
+}
+
+#browse-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: .5rem 1.3rem;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .15s;
+  font-family: inherit;
+}
+#browse-btn:hover { background: var(--accent-h); }
+
+/* ── Or divider ──────────────────────────────────── */
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  color: var(--muted);
+  font-size: .72rem;
+  margin: .9rem 0 .7rem;
+}
+.or-divider::before, .or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── URL row ─────────────────────────────────────── */
+.url-row { display: flex; gap: .5rem; }
+.url-row input {
+  flex: 1;
+  padding: .5rem .7rem;
+  border: 1px solid var(--border-d);
+  border-radius: 8px;
+  font-size: .83rem;
+  outline: none;
+  color: var(--fg);
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.url-row input::placeholder { color: #b0b8c4; }
+.url-row input:focus { border-color: var(--fg); }
+#fetch-btn {
+  background: var(--fg);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .5rem .95rem;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+#fetch-btn:hover:not(:disabled) { opacity: .8; }
+#fetch-btn:disabled { opacity: .4; }
+
+.hint {
+  font-size: .71rem;
+  color: var(--muted);
+  margin-top: .7rem;
+  line-height: 1.5;
+}
+
+/* ── Form fields ─────────────────────────────────── */
+.field { margin-bottom: .85rem; }
+.field-row { display: grid; grid-template-columns: 1fr 76px; gap: .65rem; }
+
+label.fl {
+  display: block;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .3rem;
+}
+
+input[type=text], input[type=url], select {
+  width: 100%;
+  padding: .52rem .72rem;
+  border: 1px solid var(--border-d);
+  border-radius: 8px;
+  font-size: .9rem;
+  background: #fff;
+  color: var(--fg);
+  outline: none;
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .7rem center;
+  padding-right: 2.2rem;
+}
+input:focus, select:focus {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 3px rgba(26,39,68,.08);
+}
+input::placeholder { color: #b8c0cc; }
+
+/* ── CC Info box ─────────────────────────────────── */
+#cc-info {
+  background: var(--cc-bg);
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  padding: .8rem 1rem;
+  margin-bottom: .85rem;
+  font-size: .8rem;
+  line-height: 1.7;
+  min-height: 3.8rem;
+  transition: opacity .2s;
+}
+#cc-info strong {
+  display: block;
+  font-size: .9rem;
+  color: var(--fg);
+  margin-bottom: .15rem;
+  font-weight: 700;
+}
+#cc-info .cc-row { color: var(--muted); }
+#cc-info .cc-val { color: var(--fg); font-weight: 600; }
+#cc-info a {
+  color: var(--muted);
+  font-size: .7rem;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: .25rem;
+}
+#cc-info a:hover { text-decoration: underline; }
+#cc-info.empty { color: var(--muted); font-style: italic; display: flex; align-items: center; }
+
+/* ── Source chips ────────────────────────────────── */
+.chip-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; }
+
+.chip {
+  background: none;
+  border: 1px solid var(--border-d);
+  border-radius: 999px;
+  padding: .24rem .75rem;
+  font-size: .74rem;
+  cursor: pointer;
+  color: var(--fg);
+  font-family: inherit;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.chip:hover  { border-color: var(--fg); background: var(--fg); color: #fff; }
+.chip.active { background: var(--fg); color: #fff; border-color: var(--fg); }
+
+/* ── Style preset chips ──────────────────────────── */
+.style-chips { display: flex; gap: .4rem; margin-top: .35rem; }
+.style-chip {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--border-d);
+  border-radius: 8px;
+  padding: .35rem .5rem;
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: inherit;
+  transition: all .15s;
+  text-align: center;
+}
+.style-chip:hover  { border-color: var(--fg); color: var(--fg); }
+.style-chip.active { background: var(--fg); color: #fff; border-color: var(--fg); }
+
+/* ── Toggle ──────────────────────────────────────── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .7rem;
+  cursor: pointer;
+  font-size: .82rem;
+  color: var(--fg);
+  user-select: none;
+}
+.toggle-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.toggle-wrap input[type=checkbox] { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  display: block;
+  width: 36px;
+  height: 20px;
+  background: var(--border-d);
+  border-radius: 999px;
+  transition: background .15s;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform .15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.toggle-wrap input:checked ~ .toggle-track { background: var(--fg); }
+.toggle-wrap input:checked ~ .toggle-track::after { transform: translateX(16px); }
+
+/* ── Form fills panel height ─────────────────────── */
+#license-form { display: flex; flex-direction: column; flex: 1; }
+
+/* ── Submit ──────────────────────────────────────── */
+#submit-btn {
+  width: 100%;
+  background: var(--fg);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: .78rem;
+  font-size: .92rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: .3px;
+  transition: opacity .15s, transform .1s;
+}
+#submit-btn:hover:not(:disabled) { opacity: .85; }
+#submit-btn:active:not(:disabled) { transform: scale(.99); }
+#submit-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ── Status ──────────────────────────────────────── */
+#status {
+  margin-top: .65rem;
+  padding: .6rem .85rem;
+  border-radius: 8px;
+  font-size: .82rem;
+  display: none;
+}
+.s-error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; display: block !important; }
+.s-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; display: block !important; }
+.s-loading { background: #f0f4ff; color: #1e3a6e; border: 1px solid #c7d2fe; display: block !important; }
+
+/* ── Divider ─────────────────────────────────────── */
+.section-divider { height: 1px; background: var(--border); margin: .9rem 0; }
+
+/* ── License year hint ───────────────────────────── */
+#year-hint { font-size: .7rem; color: var(--muted); margin-top: .3rem; min-height: 1rem; }
+.opt-future { opacity: .35; }
+.opt-current::after { content: ' ✓'; color: #16a34a; font-weight: 700; }
+
+/* ── Text preview ────────────────────────────────── */
+#text-preview {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .6rem;
+  padding: .45rem .65rem;
+  background: #f8f9fb;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+#text-preview-val {
+  flex: 1;
+  font-family: ui-monospace, 'SFMono-Regular', monospace;
+  font-size: .78rem;
+  color: var(--fg);
+  word-break: break-all;
+}
+#copy-btn {
+  background: none;
+  border: 1px solid var(--border-d);
+  border-radius: 6px;
+  padding: .2rem .55rem;
+  font-size: .7rem;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: border-color .15s, color .15s;
+}
+#copy-btn:hover { border-color: var(--fg); color: var(--fg); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Lizenztool</h1>
+</header>
+
+<main class="grid">
+
+  <!-- ── Left: Datei + Vorschau ── -->
+  <section class="panel">
+    <span class="panel-label">Datei wählen</span>
+
+    <div id="dropzone">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".4" flex-shrink="0" style="flex-shrink:0">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <span class="dz-hint">Drag &amp; Drop oder <label for="file-input" style="cursor:pointer;text-decoration:underline;color:var(--accent)">durchsuchen</label></span>
+      <button type="button" id="browse-btn" style="display:none"></button>
+      <input type="file" id="file-input" accept="image/jpeg,image/png,image/tiff,image/webp" hidden>
+    </div>
+
+    <div class="or-divider" style="margin:.65rem 0 .55rem">oder URL</div>
+
+    <div class="url-row">
+      <input type="url" id="image-url" placeholder="https://example.com/bild.jpg">
+      <button type="button" id="fetch-btn">Laden</button>
+    </div>
+
+    <p class="hint" style="margin-top:.5rem">Dateien werden nicht gespeichert</p>
+
+    <div class="canvas-wrap">
+      <span class="panel-label" style="margin-bottom:.5rem">Vorschau</span>
+      <canvas id="preview-canvas"></canvas>
+      <div id="text-preview" hidden>
+        <span id="text-preview-val"></span>
+        <button type="button" id="copy-btn">Kopieren</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Right: Optionen ── -->
+  <section class="panel">
+    <form id="license-form" novalidate>
+
+      <!-- Name + Jahr -->
+      <div class="field-row field">
+        <div>
+          <label class="fl" for="copyright_holder">Name</label>
+          <input type="text" id="copyright_holder" name="copyright_holder" placeholder="leer = ohne Name">
+        </div>
+        <div>
+          <label class="fl" for="year">Jahr</label>
+          <input type="text" id="year" name="year" maxlength="4" inputmode="numeric">
+        </div>
+      </div>
+
+      <!-- Lizenz -->
+      <div class="field">
+        <label class="fl" for="license_type_select">Lizenz</label>
+        <select id="license_type_select">
+          <option value="CC BY 4.0">CC BY 4.0</option>
+          <option value="CC BY-SA 4.0">CC BY-SA 4.0</option>
+          <option value="CC BY-NC 4.0">CC BY-NC 4.0</option>
+          <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0</option>
+          <option value="CC BY-ND 4.0">CC BY-ND 4.0</option>
+          <option value="CC BY-NC-ND 4.0">CC BY-NC-ND 4.0</option>
+          <option value="CC0 1.0 (Public Domain)">CC0 1.0 – Gemeinfrei</option>
+          <option value="All Rights Reserved">Alle Rechte vorbehalten</option>
+          <option value="">Eigene Lizenz…</option>
+        </select>
+      </div>
+
+      <div class="field" id="custom-field" hidden>
+        <label class="fl" for="license_type_custom">Eigene Bezeichnung</label>
+        <input type="text" id="license_type_custom" placeholder="z. B. Lizenz XY 1.0">
+      </div>
+
+      <div id="year-hint"></div>
+      <input type="hidden" id="license_url" name="license_url">
+
+      <!-- CC Info -->
+      <div id="cc-info" class="empty">Lizenz auswählen für Details</div>
+
+      <div class="section-divider"></div>
+
+      <!-- Quelle -->
+      <div class="field">
+        <label class="fl">Quelle</label>
+        <div class="chip-row">
+          <button type="button" class="chip" data-src="twitter">X / Twitter</button>
+          <button type="button" class="chip" data-src="instagram">Instagram</button>
+          <button type="button" class="chip" data-src="flickr">Flickr</button>
+          <button type="button" class="chip" data-src="wikimedia">Wikimedia</button>
+          <button type="button" class="chip" data-src="dpa">dpa / AFP</button>
+          <button type="button" class="chip" data-src="dvids">DVIDS</button>
+          <button type="button" class="chip" data-src="own">Eigene Aufnahme</button>
+        </div>
+      </div>
+
+      <!-- Stil -->
+      <div class="field">
+        <label class="fl">Stil</label>
+        <div class="style-chips">
+          <button type="button" class="style-chip active" data-preset="standard">Standard</button>
+          <button type="button" class="style-chip" data-preset="minimal">Minimal</button>
+          <button type="button" class="style-chip" data-preset="bold">Kräftig</button>
+        </div>
+      </div>
+
+      <div style="margin-top:auto">
+        <div class="section-divider"></div>
+        <label class="toggle-row" for="strip-exif">
+          <span>Metadaten entfernen (EXIF)</span>
+          <span class="toggle-wrap">
+            <input type="checkbox" id="strip-exif" checked>
+            <span class="toggle-track"></span>
+          </span>
+        </label>
+        <button type="submit" id="submit-btn" disabled>Anwenden &amp; Herunterladen</button>
+      </div>
+      <div id="status"></div>
+
+    </form>
+  </section>
+
+</main>
+
+<script>
+const CC_DATA = {
+  "CC BY 4.0":      { erlaubt: "Teilen & Bearbeiten, auch kommerziell", bedingung: "Namensnennung erforderlich",                              url: "https://creativecommons.org/licenses/by/4.0/deed.de" },
+  "CC BY-SA 4.0":   { erlaubt: "Teilen & Bearbeiten, auch kommerziell", bedingung: "Namensnennung + Weitergabe unter gleicher Lizenz",        url: "https://creativecommons.org/licenses/by-sa/4.0/deed.de" },
+  "CC BY-NC 4.0":   { erlaubt: "Teilen & Bearbeiten",                   bedingung: "Namensnennung + nur nicht-kommerziell",                   url: "https://creativecommons.org/licenses/by-nc/4.0/deed.de" },
+  "CC BY-NC-SA 4.0":{ erlaubt: "Teilen & Bearbeiten",                   bedingung: "Namensnennung + nicht-kommerziell + gleiche Lizenz",      url: "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.de" },
+  "CC BY-ND 4.0":   { erlaubt: "Teilen, auch kommerziell",              bedingung: "Namensnennung + keine Bearbeitungen",                     url: "https://creativecommons.org/licenses/by-nd/4.0/deed.de" },
+  "CC BY-NC-ND 4.0":{ erlaubt: "Teilen",                                bedingung: "Namensnennung + nicht-kommerziell + keine Bearbeitungen", url: "https://creativecommons.org/licenses/by-nc-nd/4.0/deed.de" },
+  "CC0 1.0 (Public Domain)": { erlaubt: "Alles – keine Einschränkungen", bedingung: "Keine Bedingungen (Gemeinfrei)",                         url: "https://creativecommons.org/publicdomain/zero/1.0/deed.de" },
+  "All Rights Reserved":     { erlaubt: "Keine freie Nutzung",           bedingung: "Alle Rechte beim Urheber",                               url: null },
+};
+
+const LICENSE_URLS = {
+  "CC BY 4.0":               "https://creativecommons.org/licenses/by/4.0/",
+  "CC BY-SA 4.0":            "https://creativecommons.org/licenses/by-sa/4.0/",
+  "CC BY-NC 4.0":            "https://creativecommons.org/licenses/by-nc/4.0/",
+  "CC BY-NC-SA 4.0":         "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "CC BY-ND 4.0":            "https://creativecommons.org/licenses/by-nd/4.0/",
+  "CC BY-NC-ND 4.0":         "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+  "CC0 1.0 (Public Domain)": "https://creativecommons.org/publicdomain/zero/1.0/",
+};
+
+const SOURCES = {
+  twitter:   { license: null, customDefault: "CC BY 4.0", placeholder: "@benutzername" },
+  instagram: { license: null, customDefault: "CC BY 4.0", placeholder: "@benutzername / Instagram" },
+  flickr:    { license: "CC BY 4.0",          placeholder: "Name auf Flickr" },
+  wikimedia: { license: "CC BY-SA 4.0",       placeholder: "Name, Wikimedia Commons" },
+  dpa:       { license: "All Rights Reserved",       placeholder: "Name / dpa" },
+  dvids:     { license: "CC0 1.0 (Public Domain)",   placeholder: "Name / DVIDS" },
+  own:       { license: "CC BY 4.0",                 placeholder: "" },
+};
+
+// ── License detection from holder string ──────────
+const _LICENSE_TOKENS = [
+  "CC BY-NC-ND 4.0","CC BY-NC-SA 4.0","CC BY-NC-ND 3.0","CC BY-NC-SA 3.0",
+  "CC BY-NC 4.0","CC BY-NC 3.0","CC BY-ND 4.0","CC BY-ND 3.0",
+  "CC BY-SA 4.0","CC BY-SA 3.0","CC BY 4.0","CC BY 3.0",
+  "CC0 1.0","CC0","All Rights Reserved",
+];
+const _LICENSE_NORMALIZE = {
+  "CC BY-NC-ND 3.0":"CC BY-NC-ND 4.0","CC BY-NC-SA 3.0":"CC BY-NC-SA 4.0",
+  "CC BY-NC 3.0":"CC BY-NC 4.0","CC BY-ND 3.0":"CC BY-ND 4.0",
+  "CC BY-SA 3.0":"CC BY-SA 4.0","CC BY 3.0":"CC BY 4.0",
+  "CC0":"CC0 1.0 (Public Domain)","CC0 1.0":"CC0 1.0 (Public Domain)",
+};
+
+function detectLicenseInHolder(raw) {
+  const lower = raw.toLowerCase();
+  for (const token of _LICENSE_TOKENS) {
+    const idx = lower.indexOf(token.toLowerCase());
+    if (idx === -1) continue;
+    const licKey = _LICENSE_NORMALIZE[token] || token;
+    const cleaned = (raw.slice(0, idx) + raw.slice(idx + token.length))
+      .replace(/\s*[,;/|–-]\s*/g, " ").trim().replace(/\s+/g, " ");
+    return { name: cleaned, license: licKey };
+  }
+  return null;
+}
+
+function applyLicenseDetection(holderValue) {
+  const result = detectLicenseInHolder(holderValue);
+  if (!result) return false;
+  document.getElementById("copyright_holder").value = result.name;
+  const opt = [...selLicense.options].find(o => o.value === result.license);
+  if (opt) {
+    selLicense.value = result.license;
+    urlHidden.value = LICENSE_URLS[result.license] || "";
+    customField.hidden = true;
+  } else {
+    selLicense.value = "";
+    customInput.value = result.license;
+    customField.hidden = false;
+  }
+  return true;
+}
+
+// ── HTML escape helper ────────────────────────────
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+// ── Elements ──────────────────────────────────────
+const dropzone      = document.getElementById("dropzone");
+const browseBtn     = document.getElementById("browse-btn");
+const fileInput     = document.getElementById("file-input");
+const imageUrlInput = document.getElementById("image-url");
+const fetchBtn      = document.getElementById("fetch-btn");
+const form          = document.getElementById("license-form");
+const selLicense    = document.getElementById("license_type_select");
+const customField   = document.getElementById("custom-field");
+const customInput   = document.getElementById("license_type_custom");
+const urlHidden     = document.getElementById("license_url");
+const ccInfo        = document.getElementById("cc-info");
+const statusEl      = document.getElementById("status");
+const submitBtn     = document.getElementById("submit-btn");
+
+let selectedFile    = null;
+let activeSource    = null;
+let activePreset    = "standard";
+let previewObjUrl   = null;
+let hasFlickrKey    = false;
+let hasDvidsKey     = false;
+
+fetch("/api/integrations").then(r => r.json()).then(d => {
+  hasFlickrKey = d.flickr || false;
+  hasDvidsKey  = d.dvids  || false;
+}).catch(() => {});
+
+// ── Drop zone ─────────────────────────────────────
+dropzone.addEventListener("dragover",  e => { e.preventDefault(); dropzone.classList.add("dragover"); });
+dropzone.addEventListener("dragleave", ()=> dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop",      e => { e.preventDefault(); dropzone.classList.remove("dragover"); const f = e.dataTransfer.files[0]; if (f) setFile(f); });
+dropzone.addEventListener("click",     ()=> fileInput.click());
+browseBtn.addEventListener("click",    e => { e.stopPropagation(); fileInput.click(); });
+fileInput.addEventListener("change",   ()=> { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function resetForm() {
+  document.getElementById("copyright_holder").value = "";
+  document.getElementById("copyright_holder").placeholder = "leer = ohne Name";
+  document.getElementById("year").value = new Date().getFullYear();
+  selLicense.value   = "CC BY 4.0";
+  urlHidden.value    = LICENSE_URLS["CC BY 4.0"];
+  customInput.value  = "";
+  customField.hidden = true;
+  document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
+  activeSource = null;
+  syncAll();
+}
+
+function setFile(file, name) {
+  if (previewObjUrl) { URL.revokeObjectURL(previewObjUrl); previewObjUrl = null; }
+  selectedFile = file;
+  submitBtn.disabled = false;
+  const displayName = name || file.name;
+  const size = file.size ? `${(file.size / 1024).toFixed(0)} KB` : "";
+  previewObjUrl = URL.createObjectURL(file);
+  dropzone.className = "has-file";
+  dropzone.innerHTML = "";
+  const _dzSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  _dzSvg.setAttribute("width","16"); _dzSvg.setAttribute("height","16");
+  _dzSvg.setAttribute("viewBox","0 0 24 24"); _dzSvg.setAttribute("fill","none");
+  _dzSvg.setAttribute("stroke","currentColor"); _dzSvg.setAttribute("stroke-width","1.4");
+  _dzSvg.style.cssText = "opacity:.6;flex-shrink:0";
+  _dzSvg.innerHTML = `<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>`;
+  const _dzSpan = document.createElement("span");
+  _dzSpan.className = "dz-filename";
+  _dzSpan.title = displayName;
+  _dzSpan.textContent = displayName;
+  const _dzSmall = document.createElement("small");
+  _dzSmall.style.cssText = "opacity:.55;font-size:.7rem;flex-shrink:0";
+  _dzSmall.textContent = `${size} · klicken`;
+  dropzone.append(_dzSvg, _dzSpan, _dzSmall);
+  statusEl.className = ""; statusEl.style.display = "none";
+  canvasImg = null;
+  drawPlaceholder();
+  loadCanvasImage(previewObjUrl);
+  resetForm();
+  fetchMetadata(file);
+}
+
+// ── Wikimedia Commons metadata ────────────────────
+function wikimediaFilename(url) {
+  try {
+    const u = new URL(url);
+    // Pattern 1: #/media/Datei:Name.jpg or #/media/File:Name.jpg (Wikipedia media viewer)
+    const hash = decodeURIComponent(u.hash);
+    const hashMatch = hash.match(/\/media\/(?:Datei|File):(.+)/i);
+    if (hashMatch) return hashMatch[1];
+    // Pattern 2: commons.wikimedia.org/wiki/File:Name.jpg
+    if (u.hostname === "commons.wikimedia.org") {
+      const m = u.pathname.match(/\/wiki\/(?:File|Datei):(.+)/i);
+      if (m) return decodeURIComponent(m[1]);
+    }
+    // Pattern 3: upload.wikimedia.org/wikipedia/commons/.../Name.jpg
+    if (u.hostname === "upload.wikimedia.org") {
+      return decodeURIComponent(u.pathname.split("/").pop());
+    }
+  } catch (_) {}
+  return null;
+}
+
+const _LICENSE_NORMALIZE_WM = {
+  "CC BY 1.0": "CC BY 4.0", "CC BY 2.0": "CC BY 4.0", "CC BY 2.5": "CC BY 4.0", "CC BY 3.0": "CC BY 4.0",
+  "CC BY-SA 1.0": "CC BY-SA 4.0", "CC BY-SA 2.0": "CC BY-SA 4.0", "CC BY-SA 2.5": "CC BY-SA 4.0", "CC BY-SA 3.0": "CC BY-SA 4.0",
+  "CC BY-NC 3.0": "CC BY-NC 4.0", "CC BY-ND 3.0": "CC BY-ND 4.0",
+  "CC BY-NC-SA 3.0": "CC BY-NC-SA 4.0", "CC BY-NC-ND 3.0": "CC BY-NC-ND 4.0",
+  "CC0": "CC0 1.0 (Public Domain)", "CC0 1.0": "CC0 1.0 (Public Domain)",
+  "Public Domain": "CC0 1.0 (Public Domain)",
+};
+
+async function fetchWikimediaMetadata(filename) {
+  const api = "https://commons.wikimedia.org/w/api.php";
+  const params = new URLSearchParams({
+    action: "query", format: "json", origin: "*",
+    titles: `File:${filename}`,
+    prop: "imageinfo", iiprop: "extmetadata",
+  });
+  const res = await fetch(`${api}?${params}`);
+  if (!res.ok) return;
+  const data = await res.json();
+  const pages = data?.query?.pages;
+  if (!pages) return;
+  const page = Object.values(pages)[0];
+  const meta = page?.imageinfo?.[0]?.extmetadata;
+  if (!meta) return;
+
+  // Strip HTML tags from artist field
+  const stripHtml = s => s ? s.replace(/<[^>]+>/g, "").trim() : "";
+
+  const artist = stripHtml(meta.Artist?.value || "");
+  const license = meta.LicenseShortName?.value?.trim() || "";
+  const dateRaw = (meta.DateTimeOriginal?.value || meta.DateTime?.value || "").trim();
+  const year = dateRaw.match(/\b(\d{4})\b/)?.[1] || "";
+
+  if (artist) {
+    document.getElementById("copyright_holder").value = artist;
+    applyLicenseDetection(artist);
+  }
+  if (year) {
+    document.getElementById("year").value = year;
+    updateLicenseYearHints(year);
+  }
+  if (license) {
+    const normalized = _LICENSE_NORMALIZE_WM[license] || license;
+    const opt = [...selLicense.options].find(o => o.value === normalized);
+    if (opt) {
+      selLicense.value = normalized;
+      urlHidden.value = LICENSE_URLS[normalized] || "";
+      customField.hidden = true;
+    } else {
+      selLicense.value = "";
+      customInput.value = license;
+      customField.hidden = false;
+    }
+  }
+
+  // Auto-activate Wikimedia chip
+  document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
+  document.querySelector(".chip[data-src=wikimedia]")?.classList.add("active");
+  activeSource = "wikimedia";
+
+  syncAll();
+}
+
+// ── Flickr helpers ────────────────────────────────
+function flickrPhotoId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "www.flickr.com" || u.hostname === "flickr.com") {
+      const m = u.pathname.match(/\/photos\/[^/]+\/(\d+)/);
+      if (m) return m[1];
+    }
+    if (u.hostname.endsWith(".staticflickr.com")) {
+      const m = u.pathname.split("/").pop().match(/^(\d+)_/);
+      if (m) return m[1];
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function applyFlickrMetadata(photoId) {
+  const res = await fetch("/flickr-meta", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ photo_id: photoId }),
+  });
+  if (!res.ok) return;
+  const m = await res.json();
+  if (m.author) document.getElementById("copyright_holder").value = m.author;
+  if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
+  if (m.license) {
+    const opt = [...selLicense.options].find(o => o.value === m.license);
+    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; customField.hidden = true; }
+    else { selLicense.value = ""; customInput.value = m.license; customField.hidden = false; }
+  }
+  document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
+  document.querySelector(".chip[data-src=flickr]")?.classList.add("active");
+  activeSource = "flickr";
+  syncAll();
+}
+
+// ── DVIDS helpers ─────────────────────────────────
+function dvidsAssetId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "www.dvidshub.net" || u.hostname === "dvidshub.net") {
+      const m = u.pathname.match(/\/(?:image|photo|video)\/(\d+)/i);
+      if (m) return m[1];
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function applyDvidsMetadata(assetId) {
+  const res = await fetch("/dvids-meta", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ asset_id: assetId }),
+  });
+  if (!res.ok) return;
+  const m = await res.json();
+  if (m.author) document.getElementById("copyright_holder").value = m.author;
+  if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
+  if (m.license) {
+    const opt = [...selLicense.options].find(o => o.value === m.license);
+    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; customField.hidden = true; }
+  }
+  document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
+  document.querySelector(".chip[data-src=dvids]")?.classList.add("active");
+  activeSource = "dvids";
+  syncAll();
+}
+
+// ── URL fetch ─────────────────────────────────────
+fetchBtn.addEventListener("click", async () => {
+  const url = imageUrlInput.value.trim();
+  if (!url) return;
+  setStatus("loading", "Bild wird geladen…");
+  fetchBtn.disabled = true;
+  try {
+    const wmFilename = wikimediaFilename(url);
+    const flickrId   = !wmFilename ? flickrPhotoId(url)  : null;
+    const dvidsId    = !wmFilename && !flickrId ? dvidsAssetId(url) : null;
+
+    // Wikimedia: resolve actual image URL first
+    let fetchUrl = url;
+    if (wmFilename) {
+      const api = "https://commons.wikimedia.org/w/api.php";
+      const params = new URLSearchParams({
+        action: "query", format: "json", origin: "*",
+        titles: `File:${wmFilename}`, prop: "imageinfo", iiprop: "url",
+      });
+      const r = await fetch(`${api}?${params}`);
+      if (r.ok) {
+        const d = await r.json();
+        const pages = d?.query?.pages;
+        const imgUrl = pages && Object.values(pages)[0]?.imageinfo?.[0]?.url;
+        if (imgUrl) fetchUrl = imgUrl;
+      }
+    }
+
+    const res = await fetch("/fetch-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: fetchUrl }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Laden fehlgeschlagen");
+    }
+    const blob = await res.blob();
+    const filename = (wmFilename || fetchUrl.split("/").pop().split("?")[0]) || "image.jpg";
+    setFile(new File([blob], filename, { type: blob.type }), filename);
+
+    if (wmFilename) {
+      await fetchWikimediaMetadata(wmFilename);
+      setStatus("success", "Bild + Wikimedia-Metadaten geladen.");
+    } else if (flickrId) {
+      if (hasFlickrKey) {
+        await applyFlickrMetadata(flickrId);
+        setStatus("success", "Bild + Flickr-Metadaten geladen.");
+      } else {
+        setStatus("success", "Bild geladen. Tipp: Flickr API-Schlüssel in lizenztool.toml eintragen für automatische Metadaten.");
+      }
+    } else if (dvidsId) {
+      if (hasDvidsKey) {
+        await applyDvidsMetadata(dvidsId);
+        setStatus("success", "Bild + DVIDS-Metadaten geladen.");
+      } else {
+        setStatus("success", "Bild geladen. Tipp: DVIDS API-Schlüssel in lizenztool.toml eintragen für automatische Metadaten.");
+      }
+    } else {
+      setStatus("success", "Bild geladen.");
+    }
+  } catch (err) {
+    setStatus("error", `Fehler: ${err.message}`);
+  } finally {
+    fetchBtn.disabled = false;
+  }
+});
+
+// ── Metadata pre-fill ─────────────────────────────
+async function fetchMetadata(file) {
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/metadata", { method: "POST", body: fd });
+    if (!res.ok) return;
+    const m = await res.json();
+    if (m.copyright_holder) {
+      document.getElementById("copyright_holder").value = m.copyright_holder;
+      applyLicenseDetection(m.copyright_holder);
+    }
+    if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
+    if (m.license_type && selLicense.value === "CC BY 4.0") {
+      const opt = [...selLicense.options].find(o => o.value === m.license_type);
+      if (opt) selLicense.value = m.license_type;
+      else { selLicense.value = ""; customInput.value = m.license_type; }
+    }
+    if (m.license_url) urlHidden.value = m.license_url;
+    syncAll();
+  } catch (_) {}
+}
+
+// ── License change ────────────────────────────────
+selLicense.addEventListener("change", () => {
+  const val = selLicense.value;
+  customField.hidden = val !== "";
+  if (!val) customInput.value = "";
+  if (val) urlHidden.value = LICENSE_URLS[val] || _historicLicenseUrl(val);
+  syncCcInfo();
+  updatePreview();
+});
+customInput.addEventListener("input", updatePreview);
+
+// ── Source chips ──────────────────────────────────
+document.querySelectorAll(".chip[data-src]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const src = btn.dataset.src;
+    const data = SOURCES[src];
+    if (!data) return;
+    if (activeSource === src) {
+      activeSource = null;
+      btn.classList.remove("active");
+      document.getElementById("copyright_holder").placeholder = "leer = ohne Name";
+    } else {
+      document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
+      activeSource = src;
+      btn.classList.add("active");
+      if (data.license === null) {
+        // Custom CC: open free-text field with a sensible default
+        selLicense.value  = "";
+        customInput.value = customInput.value || data.customDefault || "";
+        urlHidden.value   = "";
+      } else {
+        const opt = [...selLicense.options].find(o => o.value === data.license);
+        if (opt) { selLicense.value = data.license; urlHidden.value = LICENSE_URLS[data.license] || ""; }
+      }
+      document.getElementById("copyright_holder").placeholder = data.placeholder || "leer = ohne Name";
+      syncAll();
+    }
+  });
+});
+
+// ── Style preset chips ────────────────────────────
+document.querySelectorAll(".style-chip").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".style-chip").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activePreset = btn.dataset.preset;
+    updatePreview();
+  });
+});
+
+// ── Historic CC license helper ────────────────────
+// For values like "CC BY 3.0" derive info + URL from the 4.0 equivalent.
+function _historicLicenseInfo(val) {
+  const m = val.match(/^CC ([A-Z-]+) (\d+\.\d+)$/);
+  if (!m) return null;
+  const [, variant, version] = m;
+  const base = CC_DATA[`CC ${variant} 4.0`];
+  if (!base) return null;
+  const slug = variant.toLowerCase();
+  return { ...base, url: `https://creativecommons.org/licenses/${slug}/${version}/deed.de` };
+}
+
+function _historicLicenseUrl(val) {
+  const info = _historicLicenseInfo(val);
+  return info ? info.url.replace("/deed.de", "/") : "";
+}
+
+// ── CC Info ───────────────────────────────────────
+function syncCcInfo() {
+  const val = selLicense.value || customInput.value.trim();
+  const d = CC_DATA[val] || _historicLicenseInfo(val);
+  if (!d) { ccInfo.innerHTML = "Lizenz auswählen für Details"; ccInfo.className = "empty"; return; }
+  ccInfo.className = "";
+  ccInfo.innerHTML = `<strong>${esc(val)}</strong>
+    <div class="cc-row">Erlaubt: <span class="cc-val">${d.erlaubt}</span></div>
+    <div class="cc-row">Bedingung: <span class="cc-val">${d.bedingung}</span></div>
+    ${d.url ? `<a href="${d.url}" target="_blank" rel="noopener">Volltext lesen ↗</a>` : ""}`;
+}
+
+// ── Canvas preview ────────────────────────────────
+const previewCanvas = document.getElementById("preview-canvas");
+const PRESET_STYLE  = {
+  standard: { barRatio: 0.06, opacity: 200/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015 },
+  minimal:  { barRatio: 0.04, opacity: 150/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015 },
+  bold:     { barRatio: 0.09, opacity: 245/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015 },
+};
+fetch("/api/presets").then(r => r.json()).then(data => {
+  for (const [name, p] of Object.entries(data)) {
+    PRESET_STYLE[name] = {
+      barRatio:     p.bar_ratio,
+      opacity:      p.bar_opacity / 255,
+      fontSize:     p.font_size || 0,
+      barColor:     p.bar_color  || [0, 0, 0],
+      textColor:    p.text_color || [255, 255, 255],
+      paddingRatio: p.padding_ratio || 0.015,
+    };
+  }
+  drawCanvas();
+}).catch(() => {});
+let canvasImg = null;
+
+function loadCanvasImage(objectUrl) {
+  const img = new Image();
+  img.onload = () => { canvasImg = img; drawCanvas(); };
+  img.src = objectUrl;
+}
+
+function drawPlaceholder() {
+  const W = 800, H = 533;
+  previewCanvas.width  = W;
+  previewCanvas.height = H;
+  const ctx = previewCanvas.getContext("2d");
+  ctx.fillStyle = "#f3f4f6";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#9ca3af";
+  ctx.font = "500 22px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Vorschau", W / 2, H / 2);
+  ctx.textAlign = "left";
+  previewCanvas.style.display = "block";
+}
+
+function drawCanvas() {
+  if (!canvasImg) { drawPlaceholder(); return; }
+  const text = overlayText();
+  const style = PRESET_STYLE[activePreset] || PRESET_STYLE.standard;
+
+  const W = canvasImg.naturalWidth;
+  const H = canvasImg.naturalHeight;
+  previewCanvas.width  = W;
+  previewCanvas.height = H;
+
+  const ctx = previewCanvas.getContext("2d");
+  ctx.drawImage(canvasImg, 0, 0);
+
+  if (text) {
+    const barH     = Math.max(20, Math.round(H * style.barRatio));
+    const pad      = Math.max(4,  Math.round(H * (style.paddingRatio || 0.015)));
+    const fontSize = style.fontSize > 0 ? style.fontSize : Math.max(10, barH - 2 * pad);
+    const y        = H - barH;
+    const [br, bg, bb] = style.barColor  || [0, 0, 0];
+    const [tr, tg, tb] = style.textColor || [255, 255, 255];
+    ctx.fillStyle   = `rgba(${br},${bg},${bb},${style.opacity})`;
+    ctx.fillRect(0, y, W, barH);
+    ctx.fillStyle   = `rgb(${tr},${tg},${tb})`;
+    ctx.font        = `${fontSize}px system-ui, sans-serif`;
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, pad, y + barH / 2);
+  }
+
+  previewCanvas.style.display = "block";
+}
+
+// ── Preview text ──────────────────────────────────
+function overlayText() {
+  const holder  = document.getElementById("copyright_holder").value.trim();
+  const year    = document.getElementById("year").value.trim();
+  const licType = selLicense.value || customInput.value.trim();
+  const parts   = [];
+  if (holder) parts.push(year ? `© ${year} ${holder}` : `© ${holder}`);
+  if (licType) parts.push(licType);
+  return parts.join("  |  ");
+}
+
+function updateTextPreview() {
+  const text = overlayText();
+  const el  = document.getElementById("text-preview");
+  const val = document.getElementById("text-preview-val");
+  if (text) { val.textContent = text; el.hidden = false; }
+  else       { el.hidden = true; }
+}
+
+function updatePreview() { drawCanvas(); updateTextPreview(); }
+
+function syncCustomField() { customField.hidden = selLicense.value !== ""; }
+function syncAll() { syncCustomField(); syncCcInfo(); updatePreview(); }
+
+// ── CC version year hints ─────────────────────────
+const _VER_RELEASE = {
+  "CC BY 4.0": 2013, "CC BY-SA 4.0": 2013, "CC BY-NC 4.0": 2013,
+  "CC BY-NC-SA 4.0": 2013, "CC BY-ND 4.0": 2013, "CC BY-NC-ND 4.0": 2013,
+  "CC0 1.0 (Public Domain)": 2009,
+};
+
+const _HISTORIC_VARIANTS = ["BY", "BY-SA", "BY-NC", "BY-NC-SA", "BY-ND", "BY-NC-ND"];
+
+function _historicVersion(year) {
+  if (year >= 2013 || year < 2002) return null;
+  if (year >= 2007) return "3.0";
+  if (year >= 2005) return "2.5";
+  if (year >= 2004) return "2.0";
+  return "1.0";
+}
+
+function updateLicenseYearHints(yearStr) {
+  const yearHint = document.getElementById("year-hint");
+  const year = parseInt(yearStr, 10);
+  const valid = yearStr && yearStr.length === 4 && !isNaN(year);
+
+  // Remove previously injected historic optgroup
+  selLicense.querySelectorAll("optgroup[data-historic]").forEach(el => el.remove());
+  [...selLicense.options].forEach(o => o.classList.remove("opt-future", "opt-current"));
+
+  if (!valid) { yearHint.textContent = ""; return; }
+
+  // Mark 4.0 and CC0 options
+  [...selLicense.options].forEach(opt => {
+    const released = _VER_RELEASE[opt.value];
+    if (released === undefined) return;
+    if (opt.value.endsWith("4.0")) {
+      if (year >= 2013) opt.classList.add("opt-current");
+    } else {
+      if (year < released) opt.classList.add("opt-future");
+      else if (year < 2013) opt.classList.add("opt-current");
+    }
+  });
+
+  // Inject historic version group
+  const hVer = _historicVersion(year);
+  if (hVer) {
+    const group = document.createElement("optgroup");
+    group.label = `Zeitgemäß ${year}: CC ${hVer}`;
+    group.dataset.historic = "1";
+    for (const v of _HISTORIC_VARIANTS) {
+      const opt = document.createElement("option");
+      opt.value = `CC ${v} ${hVer}`;
+      opt.textContent = `CC ${v} ${hVer}`;
+      group.appendChild(opt);
+    }
+    const cc0Opt = [...selLicense.options].find(o => o.value === "CC0 1.0 (Public Domain)");
+    if (cc0Opt) selLicense.insertBefore(group, cc0Opt);
+    else selLicense.appendChild(group);
+  }
+
+  if (year >= 2013)      yearHint.textContent = "CC 4.0 war zeitgemäß für dieses Jahr.";
+  else if (year >= 2007) yearHint.textContent = `Zeitgemäß: CC ${hVer}. CC 4.0 erschien erst Nov. 2013.`;
+  else if (year >= 2004) yearHint.textContent = `Zeitgemäß: CC ${hVer}. CC 4.0 erschien erst Nov. 2013.`;
+  else if (year >= 2002) yearHint.textContent = "Zeitgemäß: CC 1.0 (Dez. 2002). CC 4.0 erschien erst Nov. 2013.";
+  else                   yearHint.textContent = "CC-Lizenzen gab es erst ab Dez. 2002.";
+}
+
+// ── Inputs → preview ──────────────────────────────
+document.getElementById("year").addEventListener("input", () => {
+  updateLicenseYearHints(document.getElementById("year").value.trim());
+  updatePreview();
+});
+const holderEl = document.getElementById("copyright_holder");
+holderEl.addEventListener("input", updatePreview);
+holderEl.addEventListener("blur", () => { if (applyLicenseDetection(holderEl.value)) syncAll(); });
+
+// ── Defaults ─────────────────────────────────────
+const _initYear = new Date().getFullYear();
+document.getElementById("year").value = _initYear;
+urlHidden.value = LICENSE_URLS["CC BY 4.0"];
+updateLicenseYearHints(String(_initYear));
+syncAll();
+drawPlaceholder();
+
+// ── Submit ────────────────────────────────────────
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!selectedFile) return;
+  const licType = selLicense.value || customInput.value.trim();
+  const fd = new FormData();
+  fd.append("file",             selectedFile);
+  fd.append("copyright_holder", document.getElementById("copyright_holder").value.trim());
+  fd.append("year",             document.getElementById("year").value.trim());
+  fd.append("license_type",     licType);
+  fd.append("license_url",      urlHidden.value.trim());
+  fd.append("position",         "bottom");
+  fd.append("preset",           activePreset);
+  fd.append("strip_exif",       document.getElementById("strip-exif").checked ? "true" : "false");
+
+  setStatus("loading", "Bild wird verarbeitet…");
+  submitBtn.disabled = true;
+  try {
+    const res = await fetch("/process", { method: "POST", body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || "Unbekannter Fehler");
+    }
+    const blob = await res.blob();
+    const ext  = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
+    const a    = document.createElement("a");
+    a.href     = URL.createObjectURL(blob);
+    a.download = `licensed.${ext}`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setStatus("success", "Fertig! Das Bild wird heruntergeladen.");
+  } catch (err) {
+    setStatus("error", `Fehler: ${err.message}`);
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+function setStatus(type, msg) {
+  statusEl.className   = `s-${type}`;
+  statusEl.textContent = msg;
+}
+
+document.getElementById("copy-btn").addEventListener("click", () => {
+  const text = document.getElementById("text-preview-val").textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById("copy-btn");
+    const orig = btn.textContent;
+    btn.textContent = "✓";
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+});
+</script>
+</body>
+</html>

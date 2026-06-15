@@ -1,0 +1,66 @@
+[style]
+# "bottom" or "top"
+position = "bottom"
+
+# Bar background: opacity 0–255, color as [R, G, B]
+bar_opacity = 200
+bar_color = [0, 0, 0]
+
+# Text color as [R, G, B]
+text_color = [255, 255, 255]
+
+# Font: leave empty to auto-detect a system font
+# font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+# Font size in pixels. 0 = proportional to image height (recommended)
+font_size = 0
+
+# Bar height as a fraction of image height (e.g. 0.06 = 6%)
+bar_ratio = 0.06
+
+# Text padding as a fraction of image height
+padding_ratio = 0.015
+
+
+[integrations]
+# Flickr API key — get one free at https://www.flickr.com/services/apps/create/
+# flickr_api_key = "your_key_here"
+
+# DVIDS API key — request at https://api.dvidshub.net/
+# dvids_api_key = "your_key_here"
+
+
+[output]
+# Output filename pattern.
+# Placeholders: {n} = zero-padded counter, {date} = YYYYMMDD of today
+# Examples: "img_{date}" → img_20260610.jpg  |  "licensed_{n}" → licensed_01.jpg
+filename_pattern = "img_{date}"
+
+# Remove all EXIF/IPTC/XMP metadata from the output file.
+# Requires exiftool to be installed. Defaults to true for privacy.
+strip_exif = true
+
+# Write the confirmed license info back into the output file as XMP/IPTC.
+# Only applied after strip_exif runs, so only license fields are present.
+write_license_meta = false
+
+
+# ── Style presets ─────────────────────────────────────────────────────────────
+# Override the built-in Standard / Minimal / Kräftig presets.
+# Any StyleConfig field is valid here (bar_ratio, bar_opacity, bar_color, etc.)
+# Font size: 0 = proportional to bar height; use pixel value (e.g. 18) to fix size
+
+[presets.standard]
+bar_ratio   = 0.06
+bar_opacity = 200
+font_size   = 0    
+
+[presets.minimal]
+bar_ratio   = 0.04
+bar_opacity = 150
+font_size   = 0
+
+[presets.bold]
+bar_ratio   = 0.09
+bar_opacity = 245
+font_size   = 0
