@@ -203,11 +203,11 @@ async def flickr_meta(request: Request, body: FlickrMetaRequest) -> dict:
             data = json.loads(resp.read())
     except Exception as exc:
         logger.error("Flickr API error: %s", exc)
-        raise HTTPException(502, "Flickr API nicht erreichbar") from exc
+        raise HTTPException(502, "Flickr API unreachable") from exc
 
     if data.get("stat") != "ok":
         logger.warning("Flickr API returned error: %s", data.get("message"))
-        raise HTTPException(502, "Flickr API nicht erreichbar")
+        raise HTTPException(502, "Flickr API unreachable")
 
     photo = data["photo"]
     owner = photo.get("owner", {})
@@ -244,7 +244,7 @@ async def dvids_meta(request: Request, body: DvidsMetaRequest) -> dict:
             data = json.loads(resp.read())
     except Exception as exc:
         logger.error("DVIDS API error: %s", exc)
-        raise HTTPException(502, "DVIDS API nicht erreichbar") from exc
+        raise HTTPException(502, "DVIDS API unreachable") from exc
 
     credits = data.get("credit") or []
     if isinstance(credits, list) and credits:
@@ -270,13 +270,13 @@ async def index() -> str:
 @limiter.limit("20/minute")
 async def fetch_url(request: Request, body: FetchUrlRequest) -> Response:
     if len(body.url) > MAX_FETCH_URL_LEN:
-        raise HTTPException(422, "URL zu lang")
+        raise HTTPException(422, "URL too long")
     parsed = urlparse(body.url)
     if parsed.scheme not in _ALLOWED_SCHEMES or not parsed.netloc:
-        raise HTTPException(422, "Ungültige URL")
+        raise HTTPException(422, "Invalid URL")
     if _is_ssrf_target(parsed.hostname or ""):
         logger.warning("SSRF blocked: %s from %s", _safe_log(body.url), _client_ip(request))
-        raise HTTPException(422, "URL nicht erreichbar")
+        raise HTTPException(422, "URL unreachable")
 
     try:
         req = urllib.request.Request(
@@ -286,16 +286,16 @@ async def fetch_url(request: Request, body: FetchUrlRequest) -> Response:
         with _safe_opener.open(req, timeout=10) as resp:
             content_type = resp.headers.get_content_type()
             if content_type not in _ALLOWED_CONTENT_TYPES:
-                raise HTTPException(415, f"URL liefert kein unterstütztes Bildformat ({content_type})")
+                raise HTTPException(415, f"URL does not provide a supported image format ({content_type})")
             data = resp.read(MAX_UPLOAD_BYTES + 1)
     except _SSRFBlockedError as exc:
         logger.warning("SSRF blocked via redirect: %s from %s", exc, _client_ip(request))
-        raise HTTPException(422, "URL nicht erreichbar")
+        raise HTTPException(422, "URL unreachable")
     except HTTPException:
         raise
     except Exception as exc:
         logger.error("fetch-url failed for %s: %s", _safe_log(body.url), exc)
-        raise HTTPException(502, "Bild konnte nicht geladen werden") from exc
+        raise HTTPException(502, "Could not load image") from exc
 
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, f"Bild zu groß (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")

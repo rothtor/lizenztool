@@ -1,0 +1,100 @@
+{
+  "ui": {
+    "select_file": "Select file",
+    "preview": "Preview",
+    "all_metadata": "All metadata",
+    "copyright_holder": "Copyright holder",
+    "leave_empty": "leave empty for none",
+    "year": "Year",
+    "license": "License",
+    "custom_license": "Custom license…",
+    "custom_name": "Custom name",
+    "custom_license_placeholder": "e.g. License XY 1.0",
+    "license_example": "e.g. License XY 1.0",
+    "select_license_details": "Select license for details",
+    "allowed": "Allowed",
+    "requirement": "Requirement",
+    "read_full_text": "Read full text",
+    "source": "Source",
+    "own_photo": "Own photo",
+    "style": "Style",
+    "style_bold": "Bold",
+    "style_minimal": "Minimal",
+    "style_standard": "Standard",
+    "bold": "Bold",
+    "minimal": "Minimal",
+    "standard": "Standard",
+    "remove_metadata": "Remove metadata (EXIF)",
+    "apply_download": "Apply & Download",
+    "copy": "Copy",
+    "drag_or_browse": "Drag & Drop or browse",
+    "drag_drop": "Drag & Drop or",
+    "browse": "Browse",
+    "image_url": "https://example.com/image.jpg",
+    "image_url_placeholder": "https://example.com/image.jpg",
+    "or_url": "or URL",
+    "load": "Load",
+    "files_not_saved": "Files are not saved",
+    "click_to_select": "click to select",
+    "loading": "Loading image…",
+    "loading_failed": "Loading failed",
+    "wikimedia_loaded": "Image + Wikimedia metadata loaded.",
+    "flickr_loaded": "Image + Flickr metadata loaded.",
+    "dvids_loaded": "Image + DVIDS metadata loaded.",
+    "error": "Error",
+    "success": "Success"
+  },
+  "licenses": {
+    "cc_by": "CC BY 4.0",
+    "cc_by_sa": "CC BY-SA 4.0",
+    "cc_by_nc": "CC BY-NC 4.0",
+    "cc_by_nc_sa": "CC BY-NC-SA 4.0",
+    "cc_by_nd": "CC BY-ND 4.0",
+    "cc_by_nc_nd": "CC BY-NC-ND 4.0",
+    "cc0": "CC0 1.0 (Public Domain)",
+    "all_rights": "All Rights Reserved"
+  },
+  "cc_info": {
+    "cc_by": {
+      "allowed": "Share & modify, commercial allowed",
+      "requirement": "Attribution required"
+    },
+    "cc_by_sa": {
+      "allowed": "Share & modify, commercial allowed",
+      "requirement": "Attribution + share-alike"
+    },
+    "cc_by_nc": {
+      "allowed": "Share & modify",
+      "requirement": "Attribution + non-commercial only"
+    },
+    "cc_by_nc_sa": {
+      "allowed": "Share & modify",
+      "requirement": "Attribution + non-commercial + share-alike"
+    },
+    "cc_by_nd": {
+      "allowed": "Share, commercial allowed",
+      "requirement": "Attribution + no derivatives"
+    },
+    "cc_by_nc_nd": {
+      "allowed": "Share only",
+      "requirement": "Attribution + non-commercial + no derivatives"
+    },
+    "cc0": {
+      "allowed": "Everything – no restrictions",
+      "requirement": "No conditions (Public Domain)"
+    },
+    "all_rights": {
+      "allowed": "No free use",
+      "requirement": "All rights reserved"
+    }
+  },
+  "sources": {
+    "twitter": "X / Twitter",
+    "instagram": "Instagram",
+    "flickr": "Flickr",
+    "wikimedia": "Wikimedia",
+    "dpa": "dpa / AFP",
+    "dvids": "DVIDS",
+    "own": "Own photo"
+  }
+}

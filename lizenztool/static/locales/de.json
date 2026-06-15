@@ -1,0 +1,100 @@
+{
+  "ui": {
+    "select_file": "Datei wählen",
+    "preview": "Vorschau",
+    "all_metadata": "Alle Metadaten",
+    "copyright_holder": "Name",
+    "leave_empty": "leer = ohne Name",
+    "year": "Jahr",
+    "license": "Lizenz",
+    "custom_license": "Eigene Lizenz…",
+    "custom_name": "Eigene Bezeichnung",
+    "license_example": "z. B. Lizenz XY 1.0",
+    "custom_license_placeholder": "z. B. Lizenz XY 1.0",
+    "select_license_details": "Lizenz auswählen für Details",
+    "allowed": "Erlaubt",
+    "requirement": "Bedingung",
+    "read_full_text": "Volltext lesen",
+    "source": "Quelle",
+    "own_photo": "Eigene Aufnahme",
+    "style": "Stil",
+    "style_bold": "Kräftig",
+    "style_minimal": "Minimal",
+    "style_standard": "Standard",
+    "bold": "Kräftig",
+    "minimal": "Minimal",
+    "standard": "Standard",
+    "remove_metadata": "Metadaten entfernen (EXIF)",
+    "apply_download": "Anwenden & Herunterladen",
+    "copy": "Kopieren",
+    "drag_or_browse": "Drag & Drop oder durchsuchen",
+    "drag_drop": "Drag & Drop oder",
+    "browse": "Durchsuchen",
+    "image_url": "https://example.com/bild.jpg",
+    "image_url_placeholder": "https://example.com/bild.jpg",
+    "or_url": "oder URL",
+    "load": "Laden",
+    "files_not_saved": "Dateien werden nicht gespeichert",
+    "click_to_select": "klicken",
+    "loading": "Bild wird geladen…",
+    "loading_failed": "Laden fehlgeschlagen",
+    "wikimedia_loaded": "Bild + Wikimedia-Metadaten geladen.",
+    "flickr_loaded": "Bild + Flickr-Metadaten geladen.",
+    "dvids_loaded": "Bild + DVIDS-Metadaten geladen.",
+    "error": "Fehler",
+    "success": "Erfolg"
+  },
+  "licenses": {
+    "cc_by": "CC BY 4.0",
+    "cc_by_sa": "CC BY-SA 4.0",
+    "cc_by_nc": "CC BY-NC 4.0",
+    "cc_by_nc_sa": "CC BY-NC-SA 4.0",
+    "cc_by_nd": "CC BY-ND 4.0",
+    "cc_by_nc_nd": "CC BY-NC-ND 4.0",
+    "cc0": "CC0 1.0 – Gemeinfrei",
+    "all_rights": "Alle Rechte vorbehalten"
+  },
+  "cc_info": {
+    "cc_by": {
+      "allowed": "Teilen & Bearbeiten, auch kommerziell",
+      "requirement": "Namensnennung erforderlich"
+    },
+    "cc_by_sa": {
+      "allowed": "Teilen & Bearbeiten, auch kommerziell",
+      "requirement": "Namensnennung + Weitergabe unter gleicher Lizenz"
+    },
+    "cc_by_nc": {
+      "allowed": "Teilen & Bearbeiten",
+      "requirement": "Namensnennung + nur nicht-kommerziell"
+    },
+    "cc_by_nc_sa": {
+      "allowed": "Teilen & Bearbeiten",
+      "requirement": "Namensnennung + nicht-kommerziell + gleiche Lizenz"
+    },
+    "cc_by_nd": {
+      "allowed": "Teilen, auch kommerziell",
+      "requirement": "Namensnennung + keine Bearbeitungen"
+    },
+    "cc_by_nc_nd": {
+      "allowed": "Teilen",
+      "requirement": "Namensnennung + nicht-kommerziell + keine Bearbeitungen"
+    },
+    "cc0": {
+      "allowed": "Alles – keine Einschränkungen",
+      "requirement": "Keine Bedingungen (Gemeinfrei)"
+    },
+    "all_rights": {
+      "allowed": "Keine freie Nutzung",
+      "requirement": "Alle Rechte beim Urheber"
+    }
+  },
+  "sources": {
+    "twitter": "X / Twitter",
+    "instagram": "Instagram",
+    "flickr": "Flickr",
+    "wikimedia": "Wikimedia",
+    "dpa": "dpa / AFP",
+    "dvids": "DVIDS",
+    "own": "Eigene Aufnahme"
+  }
+}

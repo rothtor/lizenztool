@@ -1,28 +1,28 @@
-# Lizenztool
+# License Tool
 
-Lizenztool fügt Bildern ein Lizenz-Overlay hinzu und schreibt optional Lizenzmetadaten (EXIF/IPTC/XMP). Es steht als **Kommandozeilen-Werkzeug** und als **Web-Anwendung** zur Verfügung.
+License Tool adds a license overlay to images and optionally writes license metadata (EXIF/IPTC/XMP). It is available as both a **command-line tool** and a **web application**.
 
-Unterstützte Formate: JPEG · PNG · TIFF · WebP
-
----
-
-## Funktionen
-
-- Overlay mit Copyright-Inhaber, Jahr und Lizenztyp (oben oder unten)
-- Liest vorhandene EXIF/IPTC/XMP-Metadaten aus und befüllt die Felder automatisch
-- Automatischer Abruf von Metadaten von **Flickr**, **DVIDS** und **Wikimedia Commons**
-- Entfernt EXIF-Daten aus der Ausgabedatei (optional)
-- Schreibt Lizenzinformationen als XMP/IPTC zurück (optional)
-- Drei Stil-Presets (Standard, Minimal, Kräftig) sowie eigene Konfiguration
-- Web-UI mit Live-Vorschau im Canvas
-- Rate Limiting und SSRF-Schutz für den öffentlichen Betrieb
+Supported formats: JPEG · PNG · TIFF · WebP
 
 ---
 
-## Voraussetzungen
+## Features
 
-- Python 3.11 oder neuer
-- [ExifTool](https://exiftool.org/) (für EXIF-Lesen/-Schreiben/-Entfernen)
+- Overlay with copyright holder, year, and license type (top or bottom)
+- Reads existing EXIF/IPTC/XMP metadata and auto-fills fields
+- Automatic metadata retrieval from **Flickr**, **DVIDS**, and **Wikimedia Commons**
+- Removes EXIF data from output file (optional)
+- Writes license information back as XMP/IPTC (optional)
+- Three style presets (Standard, Minimal, Bold) plus custom configuration
+- Web UI with live canvas preview
+- Rate limiting and SSRF protection for public deployment
+
+---
+
+## Requirements
+
+- Python 3.11 or newer
+- [ExifTool](https://exiftool.org/) (for EXIF read/write/strip)
 
 ```bash
 # Debian / Ubuntu
@@ -36,65 +36,65 @@ brew install exiftool
 
 ## Installation
 
-### Als Python-Paket
+### As Python Package
 
 ```bash
-git clone https://github.com/rothtor/lizenztool.git
-cd lizenztool
+git clone https://github.com/rothtor/license-tool.git
+cd license-tool
 pip install .
 ```
 
-Das installiert den CLI-Befehl `lizenztool` und den FastAPI-Server.
+This installs the `license-tool` CLI command and the FastAPI server.
 
-### Mit uv (empfohlen)
+### With uv (Recommended)
 
 ```bash
 uv sync
-uv run lizenztool --help
+uv run license-tool --help
 ```
 
 ---
 
-## CLI-Nutzung
+## CLI Usage
 
 ```bash
-# Einzelnes Bild verarbeiten (interaktive Eingabe)
-lizenztool bild.jpg
+# Process single image (interactive)
+license-tool image.jpg
 
-# Mehrere Bilder, Ausgabe in separates Verzeichnis
-lizenztool *.jpg --output-dir ./ausgabe/
+# Process multiple images to separate directory
+license-tool *.jpg --output-dir ./output/
 
-# Batch-Modus: gleiche Lizenz für alle Bilder (einmalige Eingabe)
-lizenztool *.jpg --batch
+# Batch mode: apply same license to all images (confirm once)
+license-tool *.jpg --batch
 
-# Vorschau ohne Speichern
-lizenztool bild.jpg --dry-run
+# Preview only, do not save
+license-tool image.jpg --dry-run
 
-# Eigene Konfigurationsdatei
-lizenztool bild.jpg --config /pfad/zur/config.toml
+# Custom config file
+license-tool image.jpg --config /path/to/config.toml
 ```
 
-Die Lizenzinformationen werden interaktiv abgefragt. Sind bereits Metadaten im Bild vorhanden, werden sie vorausgefüllt.
+License information is requested interactively. If metadata already exists in the image, fields are pre-filled.
 
 ---
 
-## Web-Anwendung
+## Web Application
 
-### Entwicklung / lokaler Start
+### Development / Local Start
 
 ```bash
-uvicorn lizenztool.api:app --reload
+uvicorn license_tool.api:app --reload
 ```
 
-Die Oberfläche ist unter [http://localhost:8000](http://localhost:8000) erreichbar.
+The interface is available at [http://localhost:8000](http://localhost:8000).
 
-### Docker Compose (Produktion)
+### Docker Compose (Production)
 
 ```bash
-# Image bauen
-docker build -t lizenztool .
+# Build image
+docker build -t license-tool .
 
-# Starten (Caddy als Reverse Proxy auf Port 8080)
+# Start (Caddy as reverse proxy on port 8080)
 docker compose up -d
 ```
 

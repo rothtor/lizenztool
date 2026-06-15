@@ -46,7 +46,7 @@ write_license_meta = false
 
 
 # ── Style presets ─────────────────────────────────────────────────────────────
-# Override the built-in Standard / Minimal / Kräftig presets.
+# Override the built-in Standard / Minimal / Bold presets.
 # Any StyleConfig field is valid here (bar_ratio, bar_opacity, bar_color, etc.)
 # Font size: 0 = proportional to bar height; use pixel value (e.g. 18) to fix size
 
