@@ -298,10 +298,10 @@ async def fetch_url(request: Request, body: FetchUrlRequest) -> Response:
         raise HTTPException(502, "Could not load image") from exc
 
     if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, f"Bild zu groß (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
+        raise HTTPException(413, f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
 
     if not _detect_ext(data):
-        raise HTTPException(415, "Datei ist kein gültiges Bild")
+        raise HTTPException(415, "Not a valid image file")
 
     return Response(content=data, media_type=content_type)
 

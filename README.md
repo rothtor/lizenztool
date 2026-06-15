@@ -1,6 +1,6 @@
-# License Tool
+# Lizenztool
 
-License Tool adds a license overlay to images and optionally writes license metadata (EXIF/IPTC/XMP). It is available as both a **command-line tool** and a **web application**.
+Lizenztool adds a license overlay to images and optionally writes license metadata (EXIF/IPTC/XMP). It is available as both a **command-line tool** and a **web application**.
 
 Supported formats: JPEG · PNG · TIFF · WebP
 
@@ -39,18 +39,18 @@ brew install exiftool
 ### As Python Package
 
 ```bash
-git clone https://github.com/rothtor/license-tool.git
-cd license-tool
+git clone https://github.com/rothtor/lizenztool.git
+cd lizenztool
 pip install .
 ```
 
-This installs the `license-tool` CLI command and the FastAPI server.
+This installs the `lizenztool` CLI command and the FastAPI server.
 
 ### With uv (Recommended)
 
 ```bash
 uv sync
-uv run license-tool --help
+uv run lizenztool --help
 ```
 
 ---
@@ -59,19 +59,19 @@ uv run license-tool --help
 
 ```bash
 # Process single image (interactive)
-license-tool image.jpg
+lizenztool image.jpg
 
 # Process multiple images to separate directory
-license-tool *.jpg --output-dir ./output/
+lizenztool *.jpg --output-dir ./output/
 
 # Batch mode: apply same license to all images (confirm once)
-license-tool *.jpg --batch
+lizenztool *.jpg --batch
 
 # Preview only, do not save
-license-tool image.jpg --dry-run
+lizenztool image.jpg --dry-run
 
 # Custom config file
-license-tool image.jpg --config /path/to/config.toml
+lizenztool image.jpg --config /path/to/config.toml
 ```
 
 License information is requested interactively. If metadata already exists in the image, fields are pre-filled.
@@ -83,7 +83,7 @@ License information is requested interactively. If metadata already exists in th
 ### Development / Local Start
 
 ```bash
-uvicorn license_tool.api:app --reload
+uvicorn lizenztool.api:app --reload
 ```
 
 The interface is available at [http://localhost:8000](http://localhost:8000).
@@ -92,86 +92,86 @@ The interface is available at [http://localhost:8000](http://localhost:8000).
 
 ```bash
 # Build image
-docker build -t license-tool .
+docker build -t lizenztool .
 
 # Start (Caddy as reverse proxy on port 8080)
 docker compose up -d
 ```
 
-Für den öffentlichen Betrieb in `Caddyfile` `:8080` durch den eigenen Domainnamen ersetzen — Caddy bezieht dann automatisch ein Let's-Encrypt-Zertifikat und aktiviert HTTPS. Anschließend die HSTS-Zeile in der `Caddyfile` einkommentieren.
+For public deployment, replace `:8080` with your own domain name in the `Caddyfile` — Caddy will then automatically obtain a Let's Encrypt certificate and enable HTTPS. Afterwards, uncomment the HSTS line in the `Caddyfile`.
 
-#### Umgebungsvariablen
+#### Environment Variables
 
-| Variable | Standard | Beschreibung |
+| Variable | Default | Description |
 |---|---|---|
-| `MAX_UPLOAD_MB` | `20` | Maximale Upload-Größe in MB |
-| `LOG_LEVEL` | `INFO` | Log-Ebene (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `MAX_UPLOAD_MB` | `20` | Maximum upload size in MB |
+| `LOG_LEVEL` | `INFO` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 
 ---
 
-## Konfiguration
+## Configuration
 
-Die Konfigurationsdatei `lizenztool.toml` wird automatisch gesucht:
+The configuration file `lizenztool.toml` is looked up automatically:
 
-1. `./lizenztool.toml` (aktuelles Verzeichnis / Docker-Mount)
+1. `./lizenztool.toml` (current directory / Docker mount)
 2. `~/.config/lizenztool/config.toml`
 
 ```toml
 [style]
-position    = "bottom"   # "top" oder "bottom"
+position    = "bottom"   # "top" or "bottom"
 bar_opacity = 200        # 0–255
 bar_color   = [0, 0, 0]
 text_color  = [255, 255, 255]
-bar_ratio   = 0.06       # Balkenhöhe als Anteil der Bildhöhe
-font_size   = 0          # 0 = proportional zur Balkenhöhe
+bar_ratio   = 0.06       # bar height as fraction of image height
+font_size   = 0          # 0 = proportional to bar height
 
 [output]
-strip_exif         = true   # EXIF aus Ausgabe entfernen
-write_license_meta = false  # Lizenz als XMP/IPTC zurückschreiben
+strip_exif         = true   # remove EXIF from output
+write_license_meta = false  # write license back as XMP/IPTC
 filename_pattern   = "img_{date}-{time}"  # {date}, {time}, {n}
 
 [integrations]
 # flickr_api_key = "..."
 # dvids_api_key  = "..."
 
-[presets.dunkel]
+[presets.dark]
 bar_color   = [30, 30, 30]
 bar_opacity = 230
 bar_ratio   = 0.07
 ```
 
-Die Konfigurationsdatei wird im laufenden Betrieb automatisch neu geladen, wenn sie auf dem Dateisystem geändert wird.
+The configuration file is automatically reloaded at runtime when it changes on the filesystem.
 
-### Flickr-Integration
+### Flickr Integration
 
-1. Kostenlosen API-Schlüssel unter [flickr.com/services/apps/create](https://www.flickr.com/services/apps/create/) beantragen
-2. `flickr_api_key` in `lizenztool.toml` eintragen
-3. Beim Laden einer Flickr-URL werden Autor, Jahr und Lizenz automatisch ausgefüllt
+1. Request a free API key at [flickr.com/services/apps/create](https://www.flickr.com/services/apps/create/)
+2. Add `flickr_api_key` to `lizenztool.toml`
+3. When loading a Flickr URL, author, year, and license are filled in automatically
 
-### DVIDS-Integration
+### DVIDS Integration
 
-1. API-Schlüssel unter [api.dvidshub.net](https://api.dvidshub.net/) beantragen
-2. `dvids_api_key` in `lizenztool.toml` eintragen
+1. Request an API key at [api.dvidshub.net](https://api.dvidshub.net/)
+2. Add `dvids_api_key` to `lizenztool.toml`
 
 ---
 
-## Entwicklung
+## Development
 
 ```bash
-# Abhängigkeiten installieren
+# Install dependencies
 pip install -e ".[dev]"
 
-# Typen prüfen
+# Check types
 mypy lizenztool/
 
-# Syntax-Check
+# Syntax check
 python -m py_compile lizenztool/*.py
 ```
 
 ---
 
-## Unterstützte Lizenztypen
+## Supported License Types
 
-| Lizenz | Beschreibung |
+| License | Description |
 |---|---|
-| CC0 1.0 | Gemeinfrei |
+| CC0 1.0 | Public Domain |
