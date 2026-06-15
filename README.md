@@ -39,7 +39,7 @@ brew install exiftool
 ### Als Python-Paket
 
 ```bash
-git clone https://github.com/example/lizenztool.git
+git clone https://github.com/rothtor/lizenztool.git
 cd lizenztool
 pip install .
 ```
