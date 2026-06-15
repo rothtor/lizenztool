@@ -32,9 +32,9 @@ padding_ratio = 0.015
 
 [output]
 # Output filename pattern.
-# Placeholders: {n} = zero-padded counter, {date} = YYYYMMDD of today
-# Examples: "img_{date}" → img_20260610.jpg  |  "licensed_{n}" → licensed_01.jpg
-filename_pattern = "img_{date}"
+# Placeholders: {date} = YYYYMMDD, {time} = HHMM, {n} = random hex
+# Example: "img_20260611-1923.jpg"
+filename_pattern = "img_{date}-{time}"
 
 # Remove all EXIF/IPTC/XMP metadata from the output file.
 # Requires exiftool to be installed. Defaults to true for privacy.
@@ -52,7 +52,7 @@ write_license_meta = false
 
 [presets.standard]
 bar_ratio   = 0.06
-bar_opacity = 200
+bar_opacity = 0
 font_size   = 0    
 
 [presets.minimal]
@@ -61,6 +61,6 @@ bar_opacity = 150
 font_size   = 0
 
 [presets.bold]
-bar_ratio   = 0.09
+bar_ratio   = 0.06
 bar_opacity = 245
 font_size   = 0

@@ -379,6 +379,47 @@ input::placeholder { color: #b8c0cc; }
 .opt-future { opacity: .35; }
 .opt-current::after { content: ' ✓'; color: #16a34a; font-weight: 700; }
 
+/* ── Metadata collapse ───────────────────────────── */
+.meta-details {
+  margin-top: .6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: .72rem;
+}
+.meta-details summary {
+  padding: .45rem .75rem;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+}
+.meta-details summary::-webkit-details-marker { display: none; }
+.meta-details summary::after { content: '▸'; margin-left: auto; transition: transform .15s; }
+.meta-details[open] summary::after { transform: rotate(90deg); }
+.meta-table {
+  border-top: 1px solid var(--border);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.meta-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr);
+  gap: .4rem;
+  padding: .28rem .75rem;
+  border-bottom: 1px solid var(--border);
+}
+.meta-row:last-child { border-bottom: none; }
+.meta-row:nth-child(even) { background: #fafbfd; }
+.meta-key { color: var(--muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta-val { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── Text preview ────────────────────────────────── */
 #text-preview {
   display: flex;
@@ -451,6 +492,10 @@ input::placeholder { color: #b8c0cc; }
         <span id="text-preview-val"></span>
         <button type="button" id="copy-btn">Kopieren</button>
       </div>
+      <details class="meta-details" id="meta-details" hidden>
+        <summary>Alle Metadaten</summary>
+        <div class="meta-table" id="meta-table"></div>
+      </details>
     </div>
   </section>
 
@@ -564,8 +609,8 @@ const LICENSE_URLS = {
 };
 
 const SOURCES = {
-  twitter:   { license: null, customDefault: "CC BY 4.0", placeholder: "@benutzername" },
-  instagram: { license: null, customDefault: "CC BY 4.0", placeholder: "@benutzername / Instagram" },
+  twitter:   { license: null, placeholder: "@benutzername" },
+  instagram: { license: null, placeholder: "@benutzername / Instagram" },
   flickr:    { license: "CC BY 4.0",          placeholder: "Name auf Flickr" },
   wikimedia: { license: "CC BY-SA 4.0",       placeholder: "Name, Wikimedia Commons" },
   dpa:       { license: "All Rights Reserved",       placeholder: "Name / dpa" },
@@ -668,7 +713,9 @@ function resetForm() {
   syncAll();
 }
 
-function setFile(file, name) {
+function setFile(file, name, keepUrl = false) {
+  if (!keepUrl) imageUrlInput.value = "";
+  if (keepUrl)  fileInput.value = "";
   if (previewObjUrl) { URL.revokeObjectURL(previewObjUrl); previewObjUrl = null; }
   selectedFile = file;
   submitBtn.disabled = false;
@@ -692,6 +739,9 @@ function setFile(file, name) {
   _dzSmall.textContent = `${size} · klicken`;
   dropzone.append(_dzSvg, _dzSpan, _dzSmall);
   statusEl.className = ""; statusEl.style.display = "none";
+  document.getElementById("meta-details").hidden = true;
+  document.getElementById("copy-btn").textContent = "Kopieren";
+  navigator.clipboard.writeText("").catch(() => {});
   canvasImg = null;
   drawPlaceholder();
   loadCanvasImage(previewObjUrl);
@@ -891,7 +941,7 @@ fetchBtn.addEventListener("click", async () => {
     }
     const blob = await res.blob();
     const filename = (wmFilename || fetchUrl.split("/").pop().split("?")[0]) || "image.jpg";
-    setFile(new File([blob], filename, { type: blob.type }), filename);
+    setFile(new File([blob], filename, { type: blob.type }), filename, true);
 
     if (wmFilename) {
       await fetchWikimediaMetadata(wmFilename);
@@ -921,11 +971,16 @@ fetchBtn.addEventListener("click", async () => {
 });
 
 // ── Metadata pre-fill ─────────────────────────────
+let _metaAbort = null;
+
 async function fetchMetadata(file) {
+  if (_metaAbort) { _metaAbort.abort(); }
+  _metaAbort = new AbortController();
+  const signal = _metaAbort.signal;
   try {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/metadata", { method: "POST", body: fd });
+    const res = await fetch("/metadata", { method: "POST", body: fd, signal });
     if (!res.ok) return;
     const m = await res.json();
     if (m.copyright_holder) {
@@ -940,7 +995,27 @@ async function fetchMetadata(file) {
     }
     if (m.license_url) urlHidden.value = m.license_url;
     syncAll();
-  } catch (_) {}
+
+    const metaDetails = document.getElementById("meta-details");
+    const metaTable   = document.getElementById("meta-table");
+    const raw = m.raw || {};
+    const entries = Object.entries(raw);
+    if (entries.length > 0) {
+      metaTable.innerHTML = "";
+      for (const [k, v] of entries) {
+        const row  = document.createElement("div");  row.className = "meta-row";
+        const key  = document.createElement("span"); key.className = "meta-key"; key.textContent = k; key.title = k;
+        const val  = document.createElement("span"); val.className = "meta-val"; val.textContent = v; val.title = v;
+        row.append(key, val);
+        metaTable.appendChild(row);
+      }
+      metaDetails.hidden = false;
+    } else {
+      metaDetails.hidden = true;
+    }
+  } catch (err) {
+    if (err.name !== "AbortError") throw err;
+  }
 }
 
 // ── License change ────────────────────────────────
@@ -969,9 +1044,8 @@ document.querySelectorAll(".chip[data-src]").forEach(btn => {
       activeSource = src;
       btn.classList.add("active");
       if (data.license === null) {
-        // Custom CC: open free-text field with a sensible default
         selLicense.value  = "";
-        customInput.value = customInput.value || data.customDefault || "";
+        customInput.value = "";
         urlHidden.value   = "";
       } else {
         const opt = [...selLicense.options].find(o => o.value === data.license);
@@ -1225,11 +1299,13 @@ form.addEventListener("submit", async e => {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       throw new Error(err.detail || "Unbekannter Fehler");
     }
-    const blob = await res.blob();
-    const ext  = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
-    const a    = document.createElement("a");
-    a.href     = URL.createObjectURL(blob);
-    a.download = `licensed.${ext}`;
+    const blob        = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const nameMatch   = disposition.match(/filename="([^"]+)"/);
+    const ext         = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
+    const a           = document.createElement("a");
+    a.href            = URL.createObjectURL(blob);
+    a.download        = nameMatch?.[1] || `img.${ext}`;
     a.click();
     URL.revokeObjectURL(a.href);
     setStatus("success", "Fertig! Das Bild wird heruntergeladen.");

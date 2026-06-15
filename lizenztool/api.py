@@ -8,7 +8,6 @@ import secrets
 import socket
 import tempfile
 import urllib.request
-import urllib.error
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -19,14 +18,35 @@ from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from .config import AppConfig, StyleConfig, expand_filename, load_config, _SEARCH_PATHS
-from .metadata import LicenseInfo, read_metadata, strip_exif as _strip_exif, write_metadata
+from .config import AppConfig, expand_filename, load_config, _SEARCH_PATHS
+from .metadata import LicenseInfo, read_metadata_full, strip_exif as _strip_exif, write_metadata
 from .overlay import render_overlay
 
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_MB", "20")) * 1024 * 1024
+MAX_TEXT_LEN     = 200   # copyright_holder, license_type
+MAX_URL_LEN      = 500   # license_url
+MAX_PRESET_LEN   = 50    # preset name
+MAX_FETCH_URL_LEN = 2048 # /fetch-url input
+MAX_ID_LEN        = 30   # Flickr / DVIDS numeric IDs
 
 _STATIC = Path(__file__).parent / "static"
 logger = logging.getLogger(__name__)
+
+
+def _configure_logging() -> None:
+    level = os.getenv("LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-8s %(name)s  %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+    # Keep uvicorn's own loggers consistent
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        logging.getLogger(name).handlers = []
+        logging.getLogger(name).propagate = True
+
+
+_configure_logging()
 
 
 def _client_ip(request: Request) -> str:
@@ -75,6 +95,13 @@ def _cleanup(*paths: Path | None) -> None:
     for p in paths:
         if p and p.exists():
             p.unlink(missing_ok=True)
+
+
+def _safe_log(value: str | None, max_len: int = 200) -> str:
+    """Strip control characters from user-supplied strings before logging."""
+    if not value:
+        return ""
+    return re.sub(r"[\x00-\x1f\x7f]", "_", str(value))[:max_len]
 
 
 limiter = Limiter(key_func=_client_ip)
@@ -162,7 +189,7 @@ async def flickr_meta(request: Request, body: FlickrMetaRequest) -> dict:
     if not key:
         raise HTTPException(503, "Flickr API key not configured")
     photo_id = body.photo_id.strip()
-    if not photo_id.isdigit():
+    if len(photo_id) > MAX_ID_LEN or not photo_id.isdigit():
         raise HTTPException(422, "Invalid Flickr photo ID")
 
     api_url = (
@@ -179,7 +206,8 @@ async def flickr_meta(request: Request, body: FlickrMetaRequest) -> dict:
         raise HTTPException(502, "Flickr API nicht erreichbar") from exc
 
     if data.get("stat") != "ok":
-        raise HTTPException(502, data.get("message", "Flickr API error"))
+        logger.warning("Flickr API returned error: %s", data.get("message"))
+        raise HTTPException(502, "Flickr API nicht erreichbar")
 
     photo = data["photo"]
     owner = photo.get("owner", {})
@@ -203,7 +231,7 @@ async def dvids_meta(request: Request, body: DvidsMetaRequest) -> dict:
     if not key:
         raise HTTPException(503, "DVIDS API key not configured")
     asset_id = body.asset_id.strip()
-    if not asset_id.isdigit():
+    if len(asset_id) > MAX_ID_LEN or not asset_id.isdigit():
         raise HTTPException(422, "Invalid DVIDS asset ID")
 
     api_url = (
@@ -241,10 +269,13 @@ async def index() -> str:
 @app.post("/fetch-url")
 @limiter.limit("20/minute")
 async def fetch_url(request: Request, body: FetchUrlRequest) -> Response:
+    if len(body.url) > MAX_FETCH_URL_LEN:
+        raise HTTPException(422, "URL zu lang")
     parsed = urlparse(body.url)
     if parsed.scheme not in _ALLOWED_SCHEMES or not parsed.netloc:
         raise HTTPException(422, "Ungültige URL")
     if _is_ssrf_target(parsed.hostname or ""):
+        logger.warning("SSRF blocked: %s from %s", _safe_log(body.url), _client_ip(request))
         raise HTTPException(422, "URL nicht erreichbar")
 
     try:
@@ -257,12 +288,14 @@ async def fetch_url(request: Request, body: FetchUrlRequest) -> Response:
             if content_type not in _ALLOWED_CONTENT_TYPES:
                 raise HTTPException(415, f"URL liefert kein unterstütztes Bildformat ({content_type})")
             data = resp.read(MAX_UPLOAD_BYTES + 1)
-    except _SSRFBlockedError:
+    except _SSRFBlockedError as exc:
+        logger.warning("SSRF blocked via redirect: %s from %s", exc, _client_ip(request))
         raise HTTPException(422, "URL nicht erreichbar")
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(502, f"Bild konnte nicht geladen werden: {exc}") from exc
+        logger.error("fetch-url failed for %s: %s", _safe_log(body.url), exc)
+        raise HTTPException(502, "Bild konnte nicht geladen werden") from exc
 
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, f"Bild zu groß (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
@@ -290,12 +323,13 @@ async def get_metadata(request: Request, file: UploadFile = File(...)) -> dict:
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
             f.write(data)
             tmp = Path(f.name)
-        info = read_metadata(tmp)
+        info, raw = read_metadata_full(tmp)
         return {
             "copyright_holder": info.copyright_holder,
             "year": info.year,
             "license_type": info.license_type,
             "license_url": info.license_url,
+            "raw": raw,
         }
     finally:
         _cleanup(tmp)
@@ -331,6 +365,15 @@ async def process(
     if year_stripped and not re.fullmatch(r"\d{4}", year_stripped):
         raise HTTPException(422, "year must be a 4-digit number")
 
+    if len(copyright_holder.strip()) > MAX_TEXT_LEN:
+        raise HTTPException(422, f"copyright_holder too long (max {MAX_TEXT_LEN})")
+    if len(license_type.strip()) > MAX_TEXT_LEN:
+        raise HTTPException(422, f"license_type too long (max {MAX_TEXT_LEN})")
+    if len(license_url.strip()) > MAX_URL_LEN:
+        raise HTTPException(422, f"license_url too long (max {MAX_URL_LEN})")
+    if len(preset) > MAX_PRESET_LEN:
+        raise HTTPException(422, "Invalid preset name")
+
     info = LicenseInfo(
         copyright_holder=copyright_holder.strip(),
         year=year_stripped,
@@ -355,8 +398,8 @@ async def process(
         if strip_exif.lower() == "true":
             try:
                 _strip_exif(out_tmp)
-            except Exception:
-                pass  # exiftool unavailable; overlay already written
+            except Exception as exc:
+                logger.warning("EXIF strip skipped (%s): %s", out_tmp.name, exc)
 
         if cfg().output.write_license_meta:
             write_metadata(out_tmp, info)
@@ -365,11 +408,13 @@ async def process(
 
         media = "image/jpeg" if ext in (".jpg", ".jpeg") else f"image/{ext.lstrip('.')}"
         dl_name = expand_filename(cfg().output.filename_pattern, secrets.token_hex(3)) + ext
+        logger.info("Processed %s -> %s (%s)", _safe_log(file.filename), dl_name, media)
         return FileResponse(out_tmp, media_type=media, filename=dl_name)
 
     except HTTPException:
         _cleanup(in_tmp, out_tmp)
         raise
     except Exception as exc:
+        logger.exception("Processing failed for %s", _safe_log(file.filename))
         _cleanup(in_tmp, out_tmp)
         raise HTTPException(500, "Processing failed") from exc

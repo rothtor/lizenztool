@@ -1,9 +1,12 @@
 services:
   app:
-    build: .
+    image: lizenztool
     restart: unless-stopped
     environment:
       MAX_UPLOAD_MB: "20"
+      LOG_LEVEL: "INFO"
+    volumes:
+      - ./lizenztool.toml:/app/lizenztool.toml:ro
     expose:
       - "8000"
 
@@ -11,9 +14,7 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - "8080:8080"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

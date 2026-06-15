@@ -1,6 +1,6 @@
 import tomllib
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 
 
@@ -18,7 +18,7 @@ class StyleConfig:
 
 @dataclass
 class OutputConfig:
-    filename_pattern: str = "licensed_{n}"  # {n} = zero-padded counter
+    filename_pattern: str = "img_{date}-{time}"  # {date}=YYYYMMDD, {time}=HHMM, {n}=random
     strip_exif: bool = True                  # remove all metadata from output file
     write_license_meta: bool = False         # write confirmed license back as XMP/IPTC
 
@@ -27,9 +27,6 @@ class OutputConfig:
 class IntegrationsConfig:
     flickr_api_key: str = ""
     dvids_api_key:  str = ""
-
-
-_DEFAULT_PRESETS: dict[str, "StyleConfig"] = {}  # filled after StyleConfig is defined
 
 
 def _default_presets() -> dict[str, "StyleConfig"]:
@@ -49,11 +46,12 @@ class AppConfig:
 
 
 def expand_filename(pattern: str, counter: str) -> str:
-    """Replace {n} and {date} placeholders in a filename pattern."""
+    now = datetime.now()
     return (
         pattern
-        .replace("{n}", counter)
-        .replace("{date}", date.today().strftime("%Y%m%d"))
+        .replace("{n}",    counter)
+        .replace("{date}", now.strftime("%Y%m%d"))
+        .replace("{time}", now.strftime("%H%M"))
     )
 
 
@@ -84,6 +82,8 @@ def _parse_color(value: str | list) -> tuple[int, int, int]:
         return max(0, min(255, v))
 
     if isinstance(value, list):
+        if len(value) != 3:
+            raise ValueError(f"Color must have exactly 3 components, got {len(value)}")
         r, g, b = value
     else:
         parts = [int(v.strip()) for v in str(value).split(",")]
@@ -112,7 +112,7 @@ def _parse(raw: dict) -> AppConfig:
     style = _parse_style(s)
 
     output = OutputConfig(
-        filename_pattern=o.get("filename_pattern", "licensed_{n}"),
+        filename_pattern=o.get("filename_pattern", OutputConfig().filename_pattern),
         strip_exif=bool(o.get("strip_exif", True)),
         write_license_meta=bool(o.get("write_license_meta", False)),
     )

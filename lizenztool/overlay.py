@@ -40,7 +40,8 @@ def render_overlay(
     if style is None:
         style = StyleConfig()
 
-    img = Image.open(image_path).convert("RGBA")
+    with Image.open(image_path) as src:
+        img = src.convert("RGBA")
     w, h = img.size
 
     bar_h = max(20, int(h * style.bar_ratio))
