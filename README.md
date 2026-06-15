@@ -174,12 +174,4 @@ python -m py_compile lizenztool/*.py
 
 | Lizenz | Beschreibung |
 |---|---|
-| CC BY 4.0 | Namensnennung |
-| CC BY-SA 4.0 | Namensnennung + Weitergabe unter gleicher Lizenz |
-| CC BY-NC 4.0 | Namensnennung + nur nicht-kommerziell |
-| CC BY-NC-SA 4.0 | Namensnennung + nicht-kommerziell + gleiche Lizenz |
-| CC BY-ND 4.0 | Namensnennung + keine Bearbeitungen |
-| CC BY-NC-ND 4.0 | Namensnennung + nicht-kommerziell + keine Bearbeitungen |
 | CC0 1.0 | Gemeinfrei |
-| All Rights Reserved | Alle Rechte vorbehalten |
-| Eigene Lizenz | Beliebiger Text und URL |
