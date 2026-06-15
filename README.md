@@ -155,15 +155,6 @@ Die Konfigurationsdatei wird im laufenden Betrieb automatisch neu geladen, wenn 
 
 ---
 
-## Sicherheitshinweise (öffentlicher Betrieb)
-
-- Port 8000 (App) **nicht** direkt nach außen öffnen — ausschließlich über den Caddy-Reverse-Proxy betreiben
-- API-Schlüssel niemals im Docker-Image ablegen; ausschließlich über die gemountete `lizenztool.toml` übergeben
-- Für TLS/HTTPS den Domainnamen in der `Caddyfile` eintragen und HSTS-Zeile einkommentieren
-- Für reproduzierbare Builds Abhängigkeiten einfrieren: `pip-compile pyproject.toml` oder `uv lock`
-
----
-
 ## Entwicklung
 
 ```bash
