@@ -47,8 +47,14 @@ async function initI18n() {
   // Apply language to UI
   applyTranslations();
 
-  // Setup language switcher
+  // Setup language switcher (defines window.setupResetButton)
   setupLanguageSwitcher();
+
+  // Wire up the reset button now that both the button element and
+  // window.resetFormFunction (set by the inline script) exist.
+  if (window.setupResetButton) {
+    window.setupResetButton();
+  }
 
   // Trigger UI initialization after i18n is fully loaded
   if (window._initLizenztoolUI) {
@@ -124,8 +130,12 @@ async function switchLanguage(lang) {
     document.documentElement.lang = currentLanguage;
     applyTranslations();
 
-    // Update dynamic content like CC_DATA
+    // Re-render imperatively-set content that data-i18n can't reach
     if (window.syncCcInfo) window.syncCcInfo();
+    if (window.updateLicenseYearHints) {
+      const yearEl = document.getElementById('year');
+      window.updateLicenseYearHints(yearEl ? yearEl.value.trim() : '');
+    }
   } catch (err) {
     console.error('Failed to switch language:', err);
   }
@@ -169,50 +179,42 @@ function setupLanguageSwitcher() {
     if (!resetBtn || !window.resetFormFunction) return;
 
     const updateResetButtonState = () => {
-      const holder = document.getElementById('copyright_holder');
-      const hasInput = holder && holder.value.trim() !== '';
-      if (hasInput) {
-        resetBtn.classList.add('active');
-      } else {
-        resetBtn.classList.remove('active');
-      }
+      const holder    = document.getElementById('copyright_holder');
+      const lic       = document.getElementById('license_type_select');
+      const imgUrl    = document.getElementById('image-url');
+      const fileInput = document.getElementById('file-input');
+      const yearEl    = document.getElementById('year');
+      const defaultYear = String(new Date().getFullYear());
+
+      const dirty =
+        (holder    && holder.value.trim() !== '') ||
+        (lic       && lic.value !== '') ||
+        (imgUrl    && imgUrl.value.trim() !== '') ||
+        (fileInput && fileInput.value !== '') ||
+        (yearEl    && yearEl.value.trim() !== '' && yearEl.value.trim() !== defaultYear) ||
+        !!window.selectedFile || !!window.canvasImg ||
+        document.querySelector('.chip[data-src].active') !== null;
+
+      resetBtn.classList.toggle('active', dirty);
     };
+    // Expose so other code paths (file load, chips, syncAll) can refresh state.
+    window.updateResetButtonState = updateResetButtonState;
 
     resetBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (resetBtn.classList.contains('active')) {
-        // Clear all data
-        document.getElementById('copyright_holder').value = '';
-        document.getElementById('year').value = new Date().getFullYear();
-        document.getElementById('license_type_select').value = '';
-        document.getElementById('license_url').value = '';
-        document.getElementById('image-url').value = '';
-        document.getElementById('file-input').value = '';
-        document.querySelectorAll('.chip[data-src]').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.style-chip').forEach(b => b.classList.remove('active'));
-        document.querySelector('.style-chip[data-preset="standard"]')?.classList.add('active');
-
-        // Reset canvas
-        if (window.selectedFile) {
-          window.selectedFile = null;
-          window.canvasImg = null;
-          window.submitBtn.disabled = true;
-          const dropzone = document.getElementById('dropzone');
-          dropzone.className = '';
-          dropzone.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".4" flex-shrink="0" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="dz-hint" data-i18n="ui.drag_or_browse">Drag & Drop oder <label for="file-input" style="cursor:pointer;text-decoration:underline;color:var(--accent)">durchsuchen</label></span>';
-          window.drawPlaceholder?.();
-        }
-
-        window.syncAll?.();
-        updateResetButtonState();
-      }
+      if (!resetBtn.classList.contains('active')) return;
+      // Delegate to the authoritative reset defined in index.html's scope.
+      if (window.fullReset) window.fullReset();
+      else if (window.resetFormFunction) window.resetFormFunction();
+      updateResetButtonState();
     });
 
     // Track input changes
     document.getElementById('copyright_holder')?.addEventListener('input', updateResetButtonState);
     document.getElementById('year')?.addEventListener('input', updateResetButtonState);
     document.getElementById('license_type_select')?.addEventListener('change', updateResetButtonState);
-    document.getElementById('license_type_custom')?.addEventListener('input', updateResetButtonState);
+    document.getElementById('image-url')?.addEventListener('input', updateResetButtonState);
+    document.getElementById('file-input')?.addEventListener('change', updateResetButtonState);
 
     updateResetButtonState();
   };

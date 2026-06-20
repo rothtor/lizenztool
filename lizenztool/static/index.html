@@ -946,6 +946,8 @@ function setFile(file, name, keepUrl = false) {
   loadCanvasImage(previewObjUrl);
   resetForm(true);
   fetchMetadata(file);
+  window.selectedFile = selectedFile;
+  window.updateResetButtonState?.();
 }
 
 // ── Wikimedia Commons metadata ────────────────────
@@ -1463,7 +1465,13 @@ function updateTextPreview() {
 
 function updatePreview() { drawCanvas(); updateTextPreview(); }
 
-function syncAll() { syncCcInfo(); updatePreview(); }
+function syncAll() {
+  syncCcInfo();
+  updatePreview();
+  window.selectedFile = selectedFile;
+  window.canvasImg = canvasImg;
+  window.updateResetButtonState?.();
+}
 
 // ── CC version year hints ─────────────────────────
 const _VER_RELEASE = {
@@ -1563,9 +1571,54 @@ window.selectedFile = selectedFile;
 window.canvasImg = canvasImg;
 window.submitBtn = submitBtn;
 window.syncAll = syncAll;
+window.syncCcInfo = syncCcInfo;
+window.updateLicenseYearHints = updateLicenseYearHints;
 window.drawPlaceholder = drawPlaceholder;
-window.resetFormFunction = resetForm;
-if (window.setupResetButton) window.setupResetButton();
+
+// Authoritative full reset — runs in this module's scope so it can clear the
+// local selectedFile/canvasImg/activeSource state that the reset button (defined
+// in i18n.js) cannot reach. The button just calls this.
+window.fullReset = function fullReset() {
+  // Text fields
+  const holder = document.getElementById("copyright_holder");
+  holder.value = "";
+  holder.placeholder = t("ui.leave_empty");
+  document.getElementById("year").value = new Date().getFullYear();
+  updateLicenseFromValue("");
+  selLicense.selectedIndex = 0;
+
+  // Sources & style presets
+  document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".style-chip").forEach(b => b.classList.remove("active"));
+  document.querySelector('.style-chip[data-preset="standard"]')?.classList.add("active");
+  activeSource = null;
+  activePreset = "standard";
+
+  // Loaded image / canvas
+  if (previewObjUrl) { URL.revokeObjectURL(previewObjUrl); previewObjUrl = null; }
+  selectedFile = null;
+  canvasImg = null;
+  window.selectedFile = null;
+  window.canvasImg = null;
+  submitBtn.disabled = true;
+  imageUrlInput.value = "";
+  fileInput.value = "";
+
+  // Dropzone back to default (with working, translated browse label)
+  dropzone.className = "";
+  dropzone.innerHTML =
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".4" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
+    `<span class="dz-hint">${t("ui.drag_drop")} <label for="file-input" style="cursor:pointer;text-decoration:underline;color:var(--accent)">${t("ui.browse")}</label></span>`;
+  statusEl.className = ""; statusEl.style.display = "none";
+  document.getElementById("meta-details").hidden = true;
+
+  drawPlaceholder();
+  syncAll();
+  window.updateResetButtonState?.();
+};
+window.resetFormFunction = window.fullReset;
+// Note: window.setupResetButton() is invoked by initI18n() after the language
+// switcher (which defines it) is created — calling it here would be too early.
 
 // ── Image Modal ───────────────────────────────────
 const imageModal = document.getElementById("image-modal");
