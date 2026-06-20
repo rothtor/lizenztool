@@ -8,7 +8,7 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -16,7 +16,6 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from .config import AppConfig, load_config, _SEARCH_PATHS
-from .metadata import read_metadata_full
 
 MAX_UPLOAD_BYTES  = int(os.getenv("MAX_UPLOAD_MB", "20")) * 1024 * 1024
 MAX_FETCH_URL_LEN = 2048
@@ -246,45 +245,6 @@ async def dvids_meta(request: Request, body: DvidsMetaRequest) -> dict:
     year = date_raw[:4] if date_raw else ""
 
     return {"author": author, "year": year, "license": "CC0 1.0 (Public Domain)"}
-
-
-@app.post("/api/exif")
-@limiter.limit("60/minute")
-async def exif_metadata(request: Request, file: UploadFile) -> dict:
-    """Extract EXIF/IPTC/XMP metadata from an uploaded image."""
-    if file.size and file.size > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
-
-    if not file.content_type or file.content_type not in _ALLOWED_CONTENT_TYPES:
-        raise HTTPException(415, f"Unsupported format ({file.content_type})")
-
-    data = await file.read()
-    if not data:
-        raise HTTPException(400, "Empty file")
-
-    if not _detect_ext(data):
-        raise HTTPException(415, "Not a valid image file")
-
-    import tempfile
-    try:
-        with tempfile.NamedTemporaryFile(suffix=_detect_ext(data), delete=False) as tmp:
-            tmp.write(data)
-            tmp_path = Path(tmp.name)
-
-        try:
-            info, raw_tags = read_metadata_full(tmp_path)
-            return {
-                "copyright_holder": info.copyright_holder,
-                "year": info.year,
-                "license_type": info.license_type,
-                "license_url": info.license_url,
-                "all_metadata": raw_tags,
-            }
-        finally:
-            tmp_path.unlink(missing_ok=True)
-    except Exception as exc:
-        logger.error("exif_metadata failed: %s", exc)
-        raise HTTPException(500, "Failed to read metadata") from exc
 
 
 @app.get("/", response_class=HTMLResponse)

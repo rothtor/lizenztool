@@ -1076,63 +1076,14 @@ let _metaSeq = 0;
 
 async function fetchMetadata(file) {
   const seq = ++_metaSeq;
-  let exifTags = {}, iptcTags = {}, xmpTags = {};
-
-  // Try client-side EXIF parsing first
   try {
     const { default: exifr } = await import('/static/vendor/exifr.esm.js');
     const raw = await exifr.parse(file, { xmp: true, iptc: true, exif: true, tiff: true, mergeOutput: false });
     if (seq !== _metaSeq || !raw) return;
-    exifTags = raw.exif || {};
-    iptcTags = raw.iptc || {};
-    xmpTags  = raw.xmp  || {};
-  } catch (clientErr) {
-    // Client-side parsing failed, try backend fallback
-    if (seq !== _metaSeq) return;
-    console.warn("Client-side EXIF parsing failed, using backend fallback:", clientErr);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/exif", { method: "POST", body: formData });
-      if (!res.ok) {
-        console.warn("Backend EXIF parsing also failed");
-        return;
-      }
-      const data = await res.json();
-      if (seq !== _metaSeq) return;
-      // Apply backend metadata
-      if (data.copyright_holder) document.getElementById("copyright_holder").value = data.copyright_holder.slice(0, 200);
-      if (data.year) { document.getElementById("year").value = data.year; updateLicenseYearHints(data.year); }
-      if (data.license_type && selLicense.value === "CC BY 4.0") {
-        const opt = [...selLicense.options].find(o => o.value === data.license_type);
-        if (opt) selLicense.value = data.license_type;
-        else { selLicense.value = ""; customInput.value = data.license_type; }
-      }
-      if (data.license_url) urlHidden.value = data.license_url;
-      // Show all metadata from backend
-      if (data.all_metadata && Object.keys(data.all_metadata).length > 0) {
-        const metaDetails = document.getElementById("meta-details");
-        const metaTable   = document.getElementById("meta-table");
-        metaTable.innerHTML = "";
-        for (const [k, v] of Object.entries(data.all_metadata)) {
-          const row = document.createElement("div");  row.className = "meta-row";
-          const key = document.createElement("span"); key.className = "meta-key"; key.textContent = k; key.title = k;
-          const val = document.createElement("span"); val.className = "meta-val"; val.textContent = String(v); val.title = String(v);
-          row.append(key, val);
-          metaTable.appendChild(row);
-        }
-        metaDetails.hidden = false;
-      }
-      syncAll();
-      return;
-    } catch (backendErr) {
-      console.warn("Both client and backend EXIF parsing failed, continuing without metadata");
-      return;
-    }
-  }
 
-  // Client-side parsing succeeded, continue with normal flow
-  try {
+    const exifTags = raw.exif || {};
+    const iptcTags = raw.iptc || {};
+    const xmpTags  = raw.xmp  || {};
 
     function firstStr(...vals) {
       for (const v of vals) {
@@ -1206,9 +1157,7 @@ async function fetchMetadata(file) {
     }
   } catch (err) {
     if (seq === _metaSeq) {
-      console.warn("Error processing EXIF metadata:", err);
-      const metaDetails = document.getElementById("meta-details");
-      metaDetails.hidden = true;
+      console.warn("EXIF read failed:", err);
     }
   }
 }
