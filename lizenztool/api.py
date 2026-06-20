@@ -1,33 +1,25 @@
-import dataclasses
 import ipaddress
 import json
 import logging
 import os
 import re
-import secrets
 import socket
-import tempfile
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from .config import AppConfig, expand_filename, load_config, _SEARCH_PATHS
-from .metadata import LicenseInfo, read_metadata_full, strip_exif as _strip_exif, write_metadata
-from .overlay import render_overlay
+from .config import AppConfig, load_config, _SEARCH_PATHS
 
-MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_MB", "20")) * 1024 * 1024
-MAX_TEXT_LEN     = 200   # copyright_holder, license_type
-MAX_URL_LEN      = 500   # license_url
-MAX_PRESET_LEN   = 50    # preset name
-MAX_FETCH_URL_LEN = 2048 # /fetch-url input
-MAX_ID_LEN        = 30   # Flickr / DVIDS numeric IDs
+MAX_UPLOAD_BYTES  = int(os.getenv("MAX_UPLOAD_MB", "20")) * 1024 * 1024
+MAX_FETCH_URL_LEN = 2048
+MAX_ID_LEN        = 30
 
 _STATIC = Path(__file__).parent / "static"
 logger = logging.getLogger(__name__)
@@ -52,7 +44,7 @@ _configure_logging()
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        return forwarded.split(",")[-1].strip()
+        return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
 
@@ -89,12 +81,6 @@ class _NoSSRFRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 
 _safe_opener = urllib.request.build_opener(_NoSSRFRedirectHandler())
-
-
-def _cleanup(*paths: Path | None) -> None:
-    for p in paths:
-        if p and p.exists():
-            p.unlink(missing_ok=True)
 
 
 def _safe_log(value: str | None, max_len: int = 200) -> str:
@@ -306,115 +292,3 @@ async def fetch_url(request: Request, body: FetchUrlRequest) -> Response:
     return Response(content=data, media_type=content_type)
 
 
-@app.post("/metadata")
-@limiter.limit("60/minute")
-async def get_metadata(request: Request, file: UploadFile = File(...)) -> dict:
-    data = await file.read()
-
-    if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "File too large")
-
-    ext = _detect_ext(data)
-    if not ext:
-        raise HTTPException(415, "Unsupported file type")
-
-    tmp: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
-            f.write(data)
-            tmp = Path(f.name)
-        info, raw = read_metadata_full(tmp)
-        return {
-            "copyright_holder": info.copyright_holder,
-            "year": info.year,
-            "license_type": info.license_type,
-            "license_url": info.license_url,
-            "raw": raw,
-        }
-    finally:
-        _cleanup(tmp)
-
-
-@app.post("/process")
-@limiter.limit("20/minute")
-async def process(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    copyright_holder: str = Form(""),
-    year: str = Form(""),
-    license_type: str = Form(""),
-    license_url: str = Form(""),
-    position: str = Form("bottom"),
-    preset: str = Form("standard"),
-    strip_exif: str = Form("true"),
-) -> FileResponse:
-    data = await file.read()
-
-    if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
-
-    ext = _detect_ext(data)
-    if not ext:
-        raise HTTPException(415, "Unsupported file type. Accepted: JPEG, PNG, TIFF, WebP")
-
-    if position not in ("top", "bottom"):
-        raise HTTPException(422, "position must be 'top' or 'bottom'")
-
-    year_stripped = year.strip()
-    if year_stripped and not re.fullmatch(r"\d{4}", year_stripped):
-        raise HTTPException(422, "year must be a 4-digit number")
-
-    if len(copyright_holder.strip()) > MAX_TEXT_LEN:
-        raise HTTPException(422, f"copyright_holder too long (max {MAX_TEXT_LEN})")
-    if len(license_type.strip()) > MAX_TEXT_LEN:
-        raise HTTPException(422, f"license_type too long (max {MAX_TEXT_LEN})")
-    if len(license_url.strip()) > MAX_URL_LEN:
-        raise HTTPException(422, f"license_url too long (max {MAX_URL_LEN})")
-    if len(preset) > MAX_PRESET_LEN:
-        raise HTTPException(422, "Invalid preset name")
-
-    info = LicenseInfo(
-        copyright_holder=copyright_holder.strip(),
-        year=year_stripped,
-        license_type=license_type.strip(),
-        license_url=license_url.strip(),
-    )
-    if info.is_empty():
-        raise HTTPException(422, "At least one license field is required")
-
-    in_tmp: Path | None = None
-    out_tmp: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
-            f.write(data)
-            in_tmp = Path(f.name)
-
-        out_tmp = in_tmp.with_name(in_tmp.stem + "_out" + ext)
-
-        style = dataclasses.replace(cfg().presets.get(preset, cfg().style), position=position)
-        render_overlay(in_tmp, info, out_tmp, style=style)
-
-        if strip_exif.lower() == "true":
-            try:
-                _strip_exif(out_tmp)
-            except Exception as exc:
-                logger.warning("EXIF strip skipped (%s): %s", out_tmp.name, exc)
-
-        if cfg().output.write_license_meta:
-            write_metadata(out_tmp, info)
-
-        background_tasks.add_task(_cleanup, in_tmp, out_tmp)
-
-        media = "image/jpeg" if ext in (".jpg", ".jpeg") else f"image/{ext.lstrip('.')}"
-        dl_name = expand_filename(cfg().output.filename_pattern, secrets.token_hex(3)) + ext
-        logger.info("Processed %s -> %s (%s)", _safe_log(file.filename), dl_name, media)
-        return FileResponse(out_tmp, media_type=media, filename=dl_name)
-
-    except HTTPException:
-        _cleanup(in_tmp, out_tmp)
-        raise
-    except Exception as exc:
-        logger.exception("Processing failed for %s", _safe_log(file.filename))
-        _cleanup(in_tmp, out_tmp)
-        raise HTTPException(500, "Processing failed") from exc

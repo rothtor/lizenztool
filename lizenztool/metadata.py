@@ -63,9 +63,10 @@ def _extract_license(tags: dict) -> LicenseInfo:
         for tag in candidates:
             value = tags.get(tag)
             if value:
-                if field_name == "year" and isinstance(value, str):
-                    value = value[:4]
-                setattr(info, field_name, str(value).strip())
+                str_value = str(value).strip()
+                if field_name == "year":
+                    str_value = str_value[:4]
+                setattr(info, field_name, str_value)
                 break
     return info
 

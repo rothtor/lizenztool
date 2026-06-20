@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lizenztool</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -498,7 +499,7 @@ input::placeholder { color: #b8c0cc; }
   .lang-btn { padding: .25rem .5rem; font-size: .65rem; }
 }
 </style>
-<script src="/static/i18n.js" defer></script>
+<script src="/static/i18n.js"></script>
 </head>
 <body>
 
@@ -617,13 +618,7 @@ input::placeholder { color: #b8c0cc; }
 
       <div style="margin-top:auto">
         <div class="section-divider"></div>
-        <label class="toggle-row" for="strip-exif">
-          <span data-i18n="ui.remove_metadata">Metadaten entfernen (EXIF)</span>
-          <span class="toggle-wrap">
-            <input type="checkbox" id="strip-exif" checked>
-            <span class="toggle-track"></span>
-          </span>
-        </label>
+        <p class="hint" style="margin-bottom:.5rem" data-i18n="ui.exif_always_stripped">EXIF-Metadaten werden beim Export immer entfernt.</p>
         <button type="submit" id="submit-btn" disabled data-i18n="ui.apply_download">Anwenden &amp; Herunterladen</button>
       </div>
       <div id="status"></div>
@@ -1021,41 +1016,82 @@ fetchBtn.addEventListener("click", async () => {
 });
 
 // ── Metadata pre-fill ─────────────────────────────
-let _metaAbort = null;
+let _metaSeq = 0;
 
 async function fetchMetadata(file) {
-  if (_metaAbort) { _metaAbort.abort(); }
-  _metaAbort = new AbortController();
-  const signal = _metaAbort.signal;
+  const seq = ++_metaSeq;
   try {
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/metadata", { method: "POST", body: fd, signal });
-    if (!res.ok) return;
-    const m = await res.json();
-    if (m.copyright_holder) {
-      document.getElementById("copyright_holder").value = m.copyright_holder;
-      applyLicenseDetection(m.copyright_holder);
+    const { default: exifr } = await import('/static/vendor/exifr.esm.js');
+    const raw = await exifr.parse(file, { xmp: true, iptc: true, exif: true, tiff: true, mergeOutput: false });
+    if (seq !== _metaSeq || !raw) return;
+
+    const exifTags = raw.exif || {};
+    const iptcTags = raw.iptc || {};
+    const xmpTags  = raw.xmp  || {};
+
+    function firstStr(...vals) {
+      for (const v of vals) {
+        if (v == null) continue;
+        const s = Array.isArray(v) ? String(v[0] ?? '') : String(v);
+        if (s.trim()) return s.trim();
+      }
+      return '';
     }
-    if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
-    if (m.license_type && selLicense.value === "CC BY 4.0") {
-      const opt = [...selLicense.options].find(o => o.value === m.license_type);
-      if (opt) selLicense.value = m.license_type;
-      else { selLicense.value = ""; customInput.value = m.license_type; }
+
+    function extractYear(val) {
+      if (!val) return '';
+      if (val instanceof Date) return String(val.getFullYear());
+      const m = String(val).match(/\b(\d{4})\b/);
+      return m ? m[1] : '';
     }
-    if (m.license_url) urlHidden.value = m.license_url;
+
+    const copyright_holder = firstStr(
+      iptcTags.CopyrightNotice,
+      xmpTags.Rights || xmpTags.rights,
+      exifTags.Copyright,
+      xmpTags.Creator || xmpTags.creator,
+      iptcTags.ByLine || iptcTags['By-line'],
+    );
+    const year = extractYear(
+      xmpTags.DateCreated
+      || iptcTags.DateCreated
+      || exifTags.DateTimeOriginal
+      || exifTags.CreateDate,
+    );
+    const license_type = firstStr(
+      xmpTags.UsageTerms,
+      xmpTags.License || xmpTags.license,
+      iptcTags.SpecialInstructions,
+    );
+    const license_url = firstStr(
+      xmpTags.WebStatement,
+      xmpTags.License || xmpTags.license,
+      xmpTags.Rights || xmpTags.rights,
+    );
+
+    if (copyright_holder) {
+      document.getElementById("copyright_holder").value = copyright_holder.slice(0, 200);
+      applyLicenseDetection(copyright_holder);
+    }
+    if (year) { document.getElementById("year").value = year; updateLicenseYearHints(year); }
+    if (license_type && selLicense.value === "CC BY 4.0") {
+      const opt = [...selLicense.options].find(o => o.value === license_type);
+      if (opt) selLicense.value = license_type;
+      else { selLicense.value = ""; customInput.value = license_type; }
+    }
+    if (license_url) urlHidden.value = license_url;
     syncAll();
 
     const metaDetails = document.getElementById("meta-details");
     const metaTable   = document.getElementById("meta-table");
-    const raw = m.raw || {};
-    const entries = Object.entries(raw);
+    const allMeta = { ...exifTags, ...iptcTags, ...xmpTags };
+    const entries = Object.entries(allMeta).filter(([, v]) => v != null && typeof v !== 'object' && typeof v !== 'function');
     if (entries.length > 0) {
       metaTable.innerHTML = "";
       for (const [k, v] of entries) {
-        const row  = document.createElement("div");  row.className = "meta-row";
-        const key  = document.createElement("span"); key.className = "meta-key"; key.textContent = k; key.title = k;
-        const val  = document.createElement("span"); val.className = "meta-val"; val.textContent = v; val.title = v;
+        const row = document.createElement("div");  row.className = "meta-row";
+        const key = document.createElement("span"); key.className = "meta-key"; key.textContent = k; key.title = k;
+        const val = document.createElement("span"); val.className = "meta-val"; val.textContent = String(v); val.title = String(v);
         row.append(key, val);
         metaTable.appendChild(row);
       }
@@ -1064,7 +1100,7 @@ async function fetchMetadata(file) {
       metaDetails.hidden = true;
     }
   } catch (err) {
-    if (err.name !== "AbortError") throw err;
+    console.warn("EXIF read failed:", err);
   }
 }
 
@@ -1329,41 +1365,48 @@ syncAll();
 drawPlaceholder();
 
 // ── Submit ────────────────────────────────────────
-form.addEventListener("submit", async e => {
+form.addEventListener("submit", e => {
   e.preventDefault();
   if (!selectedFile) return;
-  const licType = selLicense.value || customInput.value.trim();
-  const fd = new FormData();
-  fd.append("file",             selectedFile);
-  fd.append("copyright_holder", document.getElementById("copyright_holder").value.trim());
-  fd.append("year",             document.getElementById("year").value.trim());
-  fd.append("license_type",     licType);
-  fd.append("license_url",      urlHidden.value.trim());
-  fd.append("position",         "bottom");
-  fd.append("preset",           activePreset);
-  fd.append("strip_exif",       document.getElementById("strip-exif").checked ? "true" : "false");
+  if (!canvasImg) {
+    setStatus("error", "Bild wird noch geladen, bitte einen Moment warten.");
+    return;
+  }
+
+  drawCanvas();
 
   setStatus("loading", "Bild wird verarbeitet…");
   submitBtn.disabled = true;
+
+  const ext      = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
+  const mimeMap  = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+  const mimeType = mimeMap[ext] || "image/jpeg";
+  const quality  = mimeType !== "image/png" ? 0.95 : undefined;
+  const outExt   = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+
+  const now  = new Date();
+  const pad  = n => String(n).padStart(2, "0");
+  const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const dlName = `img_${date}-${time}.${outExt}`;
+
   try {
-    const res = await fetch("/process", { method: "POST", body: fd });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || "Unbekannter Fehler");
-    }
-    const blob        = await res.blob();
-    const disposition = res.headers.get("Content-Disposition") || "";
-    const nameMatch   = disposition.match(/filename="([^"]+)"/);
-    const ext         = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
-    const a           = document.createElement("a");
-    a.href            = URL.createObjectURL(blob);
-    a.download        = nameMatch?.[1] || `img.${ext}`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    setStatus("success", "Fertig! Das Bild wird heruntergeladen.");
+    previewCanvas.toBlob(blob => {
+      if (!blob) {
+        setStatus("error", "Fehler: Canvas-Export fehlgeschlagen.");
+        submitBtn.disabled = false;
+        return;
+      }
+      const a = document.createElement("a");
+      a.href     = URL.createObjectURL(blob);
+      a.download = dlName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      setStatus("success", "Fertig! Das Bild wird heruntergeladen.");
+      submitBtn.disabled = false;
+    }, mimeType, quality);
   } catch (err) {
     setStatus("error", `Fehler: ${err.message}`);
-  } finally {
     submitBtn.disabled = false;
   }
 });

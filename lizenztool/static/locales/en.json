@@ -24,7 +24,7 @@
     "bold": "Bold",
     "minimal": "Minimal",
     "standard": "Standard",
-    "remove_metadata": "Remove metadata (EXIF)",
+    "exif_always_stripped": "EXIF metadata is always removed on export.",
     "apply_download": "Apply & Download",
     "copy": "Copy",
     "drag_or_browse": "Drag & Drop or browse",
