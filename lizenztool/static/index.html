@@ -574,6 +574,28 @@ input::placeholder { color: #b8c0cc; }
   background: rgba(0, 0, 0, 0.9);
 }
 
+#image-modal-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+
+#image-modal-spinner.visible {
+  display: block;
+}
+
+@keyframes spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
 /* ── Footer ──────────────────────────────────────── */
 footer {
   position: fixed;
@@ -746,6 +768,7 @@ footer a:hover {
 <div id="image-modal">
   <div id="image-modal-content">
     <button type="button" id="image-modal-close">✕</button>
+    <div id="image-modal-spinner"></div>
     <img id="image-modal-img" alt="Preview">
   </div>
 </div>
@@ -1520,11 +1543,22 @@ if (window.setupResetButton) window.setupResetButton();
 const imageModal = document.getElementById("image-modal");
 const imageModalImg = document.getElementById("image-modal-img");
 const imageModalClose = document.getElementById("image-modal-close");
+const imageModalSpinner = document.getElementById("image-modal-spinner");
 
 previewCanvas.addEventListener("click", () => {
   if (canvasImg) {
-    imageModalImg.src = previewCanvas.toDataURL();
     imageModal.classList.add("open");
+    imageModalSpinner.classList.add("visible");
+    imageModalImg.style.display = "none";
+
+    // Convert canvas to image asynchronously
+    setTimeout(() => {
+      imageModalImg.src = previewCanvas.toDataURL();
+      imageModalImg.onload = () => {
+        imageModalSpinner.classList.remove("visible");
+        imageModalImg.style.display = "block";
+      };
+    }, 0);
   }
 });
 
