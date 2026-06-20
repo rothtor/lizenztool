@@ -25,32 +25,6 @@ _STATIC = Path(__file__).parent / "static"
 logger = logging.getLogger(__name__)
 
 
-def _build_version() -> str:
-    """Resolve the current commit hash (short) for the footer badge.
-
-    Order: image build arg → Railway runtime env → local git → 'dev'.
-    """
-    for var in ("BUILD_COMMIT", "RAILWAY_GIT_COMMIT_SHA", "SOURCE_COMMIT", "GIT_COMMIT"):
-        val = os.getenv(var)
-        if val:
-            return val[:7]
-    try:
-        import subprocess
-        out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=Path(__file__).parent,
-            capture_output=True, text=True, timeout=2,
-        )
-        if out.returncode == 0 and out.stdout.strip():
-            return out.stdout.strip()
-    except Exception:
-        pass
-    return "dev"
-
-
-BUILD_VERSION = _build_version()
-
-
 def _configure_logging() -> None:
     level = os.getenv("LOG_LEVEL", "INFO").upper()
     logging.basicConfig(
@@ -279,7 +253,7 @@ async def dvids_meta(request: Request, body: DvidsMetaRequest) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def index() -> str:
-    return (_STATIC / "index.html").read_text().replace("{{BUILD_HASH}}", BUILD_VERSION)
+    return (_STATIC / "index.html").read_text()
 
 
 @app.post("/fetch-url")
