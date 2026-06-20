@@ -805,8 +805,8 @@ function resetForm() {
   document.getElementById("copyright_holder").value = "";
   document.getElementById("copyright_holder").placeholder = "leer = ohne Name";
   document.getElementById("year").value = new Date().getFullYear();
-  selLicense.value   = "CC BY 4.0";
-  urlHidden.value    = LICENSE_URLS["CC BY 4.0"];
+  selLicense.value   = "";
+  urlHidden.value    = "";
   customInput.value  = "";
   customField.hidden = true;
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
@@ -1130,7 +1130,7 @@ async function fetchMetadata(file) {
       applyLicenseDetection(copyright_holder);
     }
     if (year) { document.getElementById("year").value = year; updateLicenseYearHints(year); }
-    if (license_type && selLicense.value === "CC BY 4.0") {
+    if (license_type && selLicense.value === "") {
       const opt = [...selLicense.options].find(o => o.value === license_type);
       if (opt) selLicense.value = license_type;
       else { selLicense.value = ""; customInput.value = license_type; }
@@ -1430,7 +1430,7 @@ holderEl.addEventListener("blur", () => { if (applyLicenseDetection(holderEl.val
 // ── Defaults ─────────────────────────────────────
 const _initYear = new Date().getFullYear();
 document.getElementById("year").value = _initYear;
-urlHidden.value = LICENSE_URLS["CC BY 4.0"];
+urlHidden.value = "";
 updateLicenseYearHints(String(_initYear));
 syncAll();
 drawPlaceholder();
