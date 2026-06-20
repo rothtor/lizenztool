@@ -151,6 +151,22 @@ class TestParse:
         assert "standard" in config.presets
         assert "minimal" in config.presets
 
+    def test_preset_inherits_text_stroke_from_style(self):
+        """A preset that omits text_stroke_width inherits it from [style]."""
+        raw = {
+            "style": {"text_stroke_width": 3},
+            "presets": {
+                "standard": {"bar_ratio": 0.06, "bar_opacity": 0},
+            },
+        }
+        config = _parse(raw)
+        # Preset omits text_stroke_width -> inherits 3 from [style], not the 1.0 default
+        assert config.presets["standard"].text_stroke.width == 3
+        # Explicit preset override still wins
+        raw["presets"]["standard"]["text_stroke_width"] = 5
+        config = _parse(raw)
+        assert config.presets["standard"].text_stroke.width == 5
+
 
 class TestExpandFilename:
     """Test expand_filename for placeholder substitution."""

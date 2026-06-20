@@ -140,6 +140,7 @@ def _parse(raw: dict) -> AppConfig:
 
     presets = _default_presets()
     for name, ps in raw.get("presets", {}).items():
-        presets[name] = _parse_style(ps)
+        # Presets inherit unset fields (e.g. text_stroke_width) from [style].
+        presets[name] = _parse_style({**s, **ps})
 
     return AppConfig(style=style, output=output, integrations=integrations, presets=presets)

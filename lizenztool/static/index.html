@@ -1423,21 +1423,26 @@ function drawCanvas() {
     const [tr, tg, tb] = style.textColor || [255, 255, 255];
     const stroke   = style.stroke || {};
     const [sr, sg, sb] = stroke.color || [0, 0, 0];
-    const strokeWidth  = stroke.width || 0;
+    // Stroke width in config is "pixels at a 32px reference font"; scale it to
+    // the actual (resolution-dependent) font size so the outline stays visible
+    // on large images instead of collapsing to a hairline.
+    const strokeWidth  = (stroke.width || 0) * (fontSize / 32);
 
     ctx.fillStyle   = `rgba(${br},${bg},${bb},${style.opacity})`;
     ctx.fillRect(0, y, W, barH);
-    ctx.fillStyle   = `rgb(${tr},${tg},${tb})`;
     ctx.font        = `${fontSize}px system-ui, sans-serif`;
     ctx.textBaseline = "middle";
 
+    // Stroke first, fill on top — yields a clean outline around the glyphs.
     if (strokeWidth > 0) {
       ctx.strokeStyle = `rgb(${sr},${sg},${sb})`;
       ctx.lineWidth = strokeWidth;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
+      ctx.miterLimit = 2;
       ctx.strokeText(text, pad, y + barH / 2);
     }
+    ctx.fillStyle   = `rgb(${tr},${tg},${tb})`;
     ctx.fillText(text, pad, y + barH / 2);
   }
 
