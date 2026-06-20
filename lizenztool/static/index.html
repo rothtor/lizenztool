@@ -367,6 +367,15 @@ input::placeholder { color: #b8c0cc; }
 #submit-btn:active:not(:disabled) { transform: scale(.99); }
 #submit-btn:disabled { opacity: .3; cursor: not-allowed; }
 
+/* EXIF keep/strip toggle */
+.exif-toggle { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .8rem; color: var(--fg); user-select: none; }
+.exif-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.exif-toggle-track { width: 34px; height: 20px; border-radius: 999px; background: var(--border-d); position: relative; transition: background .15s; flex-shrink: 0; }
+.exif-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .15s; }
+.exif-toggle input:checked + .exif-toggle-track { background: var(--accent); }
+.exif-toggle input:checked + .exif-toggle-track .exif-toggle-thumb { transform: translateX(14px); }
+.exif-toggle input:focus-visible + .exif-toggle-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ── Status ──────────────────────────────────────── */
 #status {
   margin-top: .65rem;
@@ -768,7 +777,12 @@ footer a:hover {
 
       <div style="margin-top:auto">
         <div class="section-divider"></div>
-        <p class="hint" style="margin-bottom:.5rem" data-i18n="ui.exif_always_stripped">EXIF-Metadaten werden beim Export immer entfernt.</p>
+        <label class="exif-toggle">
+          <input type="checkbox" id="keep-exif">
+          <span class="exif-toggle-track"><span class="exif-toggle-thumb"></span></span>
+          <span data-i18n="ui.keep_exif">Original-Metadaten behalten</span>
+        </label>
+        <p class="hint" id="exif-hint" style="margin:.45rem 0 .6rem" data-i18n="ui.exif_stripped_hint">EXIF-/Metadaten werden beim Export entfernt.</p>
         <button type="submit" id="submit-btn" disabled data-i18n="ui.apply_download">Anwenden &amp; Herunterladen</button>
       </div>
       <div id="status"></div>
@@ -1664,6 +1678,9 @@ window.fullReset = function fullReset() {
   statusEl.className = ""; statusEl.style.display = "none";
   document.getElementById("meta-details").hidden = true;
 
+  const keepExif = document.getElementById("keep-exif");
+  if (keepExif && keepExif.checked) { keepExif.checked = false; window.updateExifHint?.(); }
+
   drawPlaceholder();
   syncAll();
   window.updateResetButtonState?.();
@@ -1711,6 +1728,131 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// ── Metadata preservation (optional, client-side, no library) ─────────────
+// Canvas re-encoding strips all metadata. When the user opts in, copy the
+// original file's metadata segments verbatim into the exported blob. Copying
+// raw bytes keeps JPEG segment structure / PNG chunk CRCs valid.
+const keepExifEl = document.getElementById("keep-exif");
+
+function _isJpeg(b) { return b[0] === 0xFF && b[1] === 0xD8; }
+const _PNG_SIG = [137, 80, 78, 71, 13, 10, 26, 10];
+function _isPng(b) { return _PNG_SIG.every((v, i) => b[i] === v); }
+function _u32(b, o) { return (b[o] * 0x1000000) + (b[o + 1] << 16) + (b[o + 2] << 8) + b[o + 3]; }
+
+// Reset EXIF Orientation to 1 inside a copied APP1 segment. The browser already
+// bakes orientation into the canvas pixels, so a leftover tag would double-rotate.
+function _neutralizeOrientation(seg) {
+  // seg = [FF E1 len-hi len-lo "Exif\0\0" <TIFF…>]
+  const tiff = 10;
+  if (String.fromCharCode(seg[4], seg[5], seg[6], seg[7]) !== "Exif") return;
+  const le = seg[tiff] === 0x49; // 'II' little-endian, else 'MM' big-endian
+  const rd16 = o => le ? (seg[o] | (seg[o + 1] << 8)) : ((seg[o] << 8) | seg[o + 1]);
+  const rd32 = o => le ? (seg[o] | (seg[o + 1] << 8) | (seg[o + 2] << 16) | (seg[o + 3] * 0x1000000))
+                       : ((seg[o] * 0x1000000) | (seg[o + 1] << 16) | (seg[o + 2] << 8) | seg[o + 3]);
+  const ifd0 = tiff + rd32(tiff + 4);
+  if (ifd0 + 2 > seg.length) return;
+  const n = rd16(ifd0);
+  for (let i = 0; i < n; i++) {
+    const e = ifd0 + 2 + i * 12;
+    if (rd16(e) === 0x0112) { // Orientation tag, SHORT stored inline
+      if (le) { seg[e + 8] = 1; seg[e + 9] = 0; } else { seg[e + 8] = 0; seg[e + 9] = 1; }
+      return;
+    }
+  }
+}
+
+function _spliceJpeg(orig, out) {
+  // Collect APP1 (EXIF + XMP) segments from the original.
+  const segs = [];
+  let i = 2;
+  while (i + 4 <= orig.length) {
+    if (orig[i] !== 0xFF) break;
+    const marker = orig[i + 1];
+    if (marker === 0xDA || marker === 0xD9) break;            // SOS / EOI
+    if (marker >= 0xD0 && marker <= 0xD7) { i += 2; continue; } // standalone
+    const len = (orig[i + 2] << 8) | orig[i + 3];
+    if (len < 2) break;
+    const end = i + 2 + len;
+    if (marker === 0xE1) {
+      const d = i + 4;
+      const sig = String.fromCharCode(orig[d], orig[d + 1], orig[d + 2], orig[d + 3]);
+      const xmp = String.fromCharCode.apply(null, orig.slice(d, d + 28));
+      if (sig === "Exif" || xmp.startsWith("http://ns.adobe.com/xap/1.0/")) {
+        const seg = orig.slice(i, end);
+        if (sig === "Exif") _neutralizeOrientation(seg);
+        segs.push(seg);
+      }
+    }
+    i = end;
+  }
+  if (!segs.length) return null;
+  // Insert after SOI and any leading APP0 (JFIF), before the rest.
+  let ins = 2;
+  if (out[2] === 0xFF && out[3] === 0xE0) ins = 4 + ((out[4] << 8) | out[5]);
+  const extra = segs.reduce((a, s) => a + s.length, 0);
+  const merged = new Uint8Array(out.length + extra);
+  merged.set(out.slice(0, ins), 0);
+  let p = ins;
+  for (const s of segs) { merged.set(s, p); p += s.length; }
+  merged.set(out.slice(ins), p);
+  return merged;
+}
+
+function _splicePng(orig, out) {
+  // Copy metadata chunks (EXIF + all text/XMP) from original.
+  const wanted = new Set(["eXIf", "iTXt", "tEXt", "zTXt"]);
+  const chunks = [];
+  let o = 8;
+  while (o + 8 <= orig.length) {
+    const len = _u32(orig, o);
+    const type = String.fromCharCode(orig[o + 4], orig[o + 5], orig[o + 6], orig[o + 7]);
+    const end = o + 12 + len;
+    if (type === "IEND" || end > orig.length) break;
+    if (wanted.has(type)) chunks.push(orig.slice(o, end));
+    o = end;
+  }
+  if (!chunks.length) return null;
+  // Insert before the first IDAT (valid position for all these chunk types).
+  let q = 8, idat = -1;
+  while (q + 8 <= out.length) {
+    const len = _u32(out, q);
+    const type = String.fromCharCode(out[q + 4], out[q + 5], out[q + 6], out[q + 7]);
+    if (type === "IDAT") { idat = q; break; }
+    q = q + 12 + len;
+  }
+  if (idat < 0) return null;
+  const extra = chunks.reduce((a, c) => a + c.length, 0);
+  const merged = new Uint8Array(out.length + extra);
+  merged.set(out.slice(0, idat), 0);
+  let p = idat;
+  for (const c of chunks) { merged.set(c, p); p += c.length; }
+  merged.set(out.slice(idat), p);
+  return merged;
+}
+
+async function preserveMetadata(originalFile, exportedBlob, mimeType) {
+  try {
+    const [ob, xb] = await Promise.all([originalFile.arrayBuffer(), exportedBlob.arrayBuffer()]);
+    const orig = new Uint8Array(ob), out = new Uint8Array(xb);
+    let merged = null;
+    if (mimeType === "image/jpeg" && _isJpeg(orig) && _isJpeg(out)) merged = _spliceJpeg(orig, out);
+    else if (mimeType === "image/png" && _isPng(orig) && _isPng(out)) merged = _splicePng(orig, out);
+    return merged ? new Blob([merged], { type: mimeType }) : exportedBlob;
+  } catch (err) {
+    console.warn("Metadata preservation failed:", err);
+    return exportedBlob;
+  }
+}
+
+function updateExifHint() {
+  const hintEl = document.getElementById("exif-hint");
+  const key = keepExifEl.checked ? "ui.exif_kept_hint" : "ui.exif_stripped_hint";
+  hintEl.setAttribute("data-i18n", key);
+  hintEl.textContent = t(key);
+}
+keepExifEl.addEventListener("change", updateExifHint);
+window.updateExifHint = updateExifHint;
+
 // ── Submit ────────────────────────────────────────
 form.addEventListener("submit", e => {
   e.preventDefault();
@@ -1737,19 +1879,26 @@ form.addEventListener("submit", e => {
   const time = `${pad(now.getHours())}${pad(now.getMinutes())}`;
   const dlName = `img_${date}-${time}.${outExt}`;
 
+  const origFile = selectedFile;
   try {
-    previewCanvas.toBlob(blob => {
+    previewCanvas.toBlob(async blob => {
       if (!blob) {
         setStatus("error", t("ui.canvas_export_failed"));
         submitBtn.disabled = false;
         return;
       }
+      const supported = mimeType === "image/jpeg" || mimeType === "image/png";
+      let outBlob = blob;
+      if (keepExifEl.checked && supported && origFile) {
+        outBlob = await preserveMetadata(origFile, blob, mimeType);
+      }
       const a = document.createElement("a");
-      a.href     = URL.createObjectURL(blob);
+      a.href     = URL.createObjectURL(outBlob);
       a.download = dlName;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      setStatus("success", t("ui.download_success"));
+      const note = (keepExifEl.checked && !supported) ? " " + t("ui.exif_unsupported") : "";
+      setStatus("success", t("ui.download_success") + note);
       submitBtn.disabled = false;
     }, mimeType, quality);
   } catch (err) {
