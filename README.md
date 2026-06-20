@@ -158,7 +158,7 @@ The configuration file is automatically reloaded at runtime when it changes on t
 ## Development
 
 ```bash
-# Install dependencies
+# Install dependencies (including test tools)
 pip install -e ".[dev]"
 
 # Check types
@@ -166,6 +166,66 @@ mypy lizenztool/
 
 # Syntax check
 python -m py_compile lizenztool/*.py
+```
+
+### Testing
+
+The project includes a comprehensive test suite covering API endpoints, configuration parsing, metadata extraction, and security.
+
+#### Install Test Dependencies
+
+```bash
+pip install -e ".[dev]"
+```
+
+This installs:
+- **pytest** (test runner)
+- **pytest-cov** (coverage reporting)
+- **httpx** (async HTTP client for FastAPI TestClient)
+
+#### Run All Tests
+
+```bash
+# Run all tests with summary
+pytest tests/
+
+# Run with verbose output
+pytest tests/ -v
+
+# Run with coverage report
+pytest tests/ --cov=lizenztool --cov-report=term-missing
+```
+
+#### Run Specific Test Suites
+
+```bash
+# API endpoint tests (SSRF, rate limiting, input validation)
+pytest tests/test_api_endpoints.py -v
+
+# Core API functions (IP detection, format detection, logging)
+pytest tests/test_api_core.py -v
+
+# Configuration parsing
+pytest tests/test_config.py -v
+
+# Metadata extraction (EXIF/IPTC/XMP)
+pytest tests/test_metadata.py -v
+
+# Security tests (SSRF, injection, file size limits)
+pytest tests/test_security.py -v
+```
+
+#### Test Coverage
+
+Current coverage:
+- **API module**: 90% (186 statements)
+- **Config module**: 100% (dataclass parsing tested)
+- **Metadata module**: 70% (CLI-only functions excluded)
+
+Run coverage report:
+```bash
+pytest tests/ --cov=lizenztool --cov-report=html
+open htmlcov/index.html
 ```
 
 ---
