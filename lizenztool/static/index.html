@@ -801,7 +801,7 @@ dropzone.addEventListener("click",     ()=> fileInput.click());
 browseBtn.addEventListener("click",    e => { e.stopPropagation(); fileInput.click(); });
 fileInput.addEventListener("change",   ()=> { if (fileInput.files[0]) setFile(fileInput.files[0]); });
 
-function resetForm() {
+function resetForm(skipSync = false) {
   document.getElementById("copyright_holder").value = "";
   document.getElementById("copyright_holder").placeholder = t("ui.leave_empty");
   document.getElementById("year").value = new Date().getFullYear();
@@ -811,7 +811,7 @@ function resetForm() {
   customField.hidden = true;
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   activeSource = null;
-  syncAll();
+  if (!skipSync) syncAll();
 }
 
 function setFile(file, name, keepUrl = false) {
@@ -846,7 +846,7 @@ function setFile(file, name, keepUrl = false) {
   canvasImg = null;
   drawPlaceholder();
   loadCanvasImage(previewObjUrl);
-  resetForm();
+  resetForm(true);
   fetchMetadata(file);
 }
 
