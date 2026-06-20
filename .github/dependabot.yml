@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Python package dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "rothtor"
+    labels:
+      - "dependencies"
+      - "python"
+    # Group minor updates together to reduce PR spam
+    groups:
+      minor-patch:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    # Only allow direct dependencies (not transitive)
+    allow:
+      - dependency-type: "direct"
+
+  # GitHub Actions workflow versions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
