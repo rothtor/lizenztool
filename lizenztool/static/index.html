@@ -439,6 +439,8 @@ input::placeholder { color: #b8c0cc; }
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* explicit display:flex above overrides the UA [hidden] rule — restore it */
+#text-preview[hidden] { display: none; }
 #text-preview-val {
   flex: 1;
   font-family: ui-monospace, 'SFMono-Regular', monospace;
@@ -1465,7 +1467,7 @@ function updateTextPreview() {
   const el  = document.getElementById("text-preview");
   const val = document.getElementById("text-preview-val");
   if (text) { val.textContent = text; el.hidden = false; }
-  else       { el.hidden = true; }
+  else       { val.textContent = ""; el.hidden = true; }
 }
 
 function updatePreview() { drawCanvas(); updateTextPreview(); }
