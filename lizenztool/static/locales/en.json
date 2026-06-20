@@ -2,7 +2,7 @@
   "ui": {
     "select_file": "Select file",
     "preview": "Preview",
-    "all_metadata": "All metadata",
+    "all_metadata": "EXIF data",
     "copyright_holder": "Copyright holder",
     "leave_empty": "leave empty for none",
     "year": "Year",
