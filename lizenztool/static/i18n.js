@@ -158,14 +158,60 @@ function setupLanguageSwitcher() {
     });
   });
 
-  // Add reset handler
-  const resetBtn = switcher.querySelector('#reset-btn');
-  if (resetBtn) {
+  // Add reset handler (will be set up after DOM is ready)
+  window.setupResetButton = () => {
+    const resetBtn = document.getElementById('reset-btn');
+    if (!resetBtn || !window.resetFormFunction) return;
+
+    const updateResetButtonState = () => {
+      const holder = document.getElementById('copyright_holder');
+      const hasInput = holder && holder.value.trim() !== '';
+      if (hasInput) {
+        resetBtn.classList.add('active');
+      } else {
+        resetBtn.classList.remove('active');
+      }
+    };
+
     resetBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      location.reload();
+      if (resetBtn.classList.contains('active')) {
+        // Clear all data
+        document.getElementById('copyright_holder').value = '';
+        document.getElementById('year').value = new Date().getFullYear();
+        document.getElementById('license_type_select').value = '';
+        document.getElementById('license_type_custom').value = '';
+        document.getElementById('license_url').value = '';
+        document.getElementById('image-url').value = '';
+        document.getElementById('file-input').value = '';
+        document.querySelectorAll('.chip[data-src]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.style-chip').forEach(b => b.classList.remove('active'));
+        document.querySelector('.style-chip[data-preset="standard"]')?.classList.add('active');
+
+        // Reset canvas
+        if (window.selectedFile) {
+          window.selectedFile = null;
+          window.canvasImg = null;
+          window.submitBtn.disabled = true;
+          const dropzone = document.getElementById('dropzone');
+          dropzone.className = '';
+          dropzone.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".4" flex-shrink="0" style="flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="dz-hint" data-i18n="ui.drag_or_browse">Drag & Drop oder <label for="file-input" style="cursor:pointer;text-decoration:underline;color:var(--accent)">durchsuchen</label></span>';
+          window.drawPlaceholder?.();
+        }
+
+        window.syncAll?.();
+        updateResetButtonState();
+      }
     });
-  }
+
+    // Track input changes
+    document.getElementById('copyright_holder')?.addEventListener('input', updateResetButtonState);
+    document.getElementById('year')?.addEventListener('input', updateResetButtonState);
+    document.getElementById('license_type_select')?.addEventListener('change', updateResetButtonState);
+    document.getElementById('license_type_custom')?.addEventListener('input', updateResetButtonState);
+
+    updateResetButtonState();
+  };
 
   header.appendChild(switcher);
 }

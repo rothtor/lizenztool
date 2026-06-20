@@ -497,8 +497,19 @@ input::placeholder { color: #b8c0cc; }
   font-size: .9rem;
   color: var(--muted);
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 0.4;
   font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.reset-btn.active {
+  opacity: 1;
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.reset-btn:not(.active) {
+  cursor: default;
 }
 
 @media (max-width: 480px) {
@@ -1495,6 +1506,15 @@ urlHidden.value = "";
 updateLicenseYearHints(String(_initYear));
 syncAll();
 drawPlaceholder();
+
+// ── Setup reset button ────────────────────────────
+window.selectedFile = selectedFile;
+window.canvasImg = canvasImg;
+window.submitBtn = submitBtn;
+window.syncAll = syncAll;
+window.drawPlaceholder = drawPlaceholder;
+window.resetFormFunction = resetForm;
+if (window.setupResetButton) window.setupResetButton();
 
 // ── Image Modal ───────────────────────────────────
 const imageModal = document.getElementById("image-modal");
