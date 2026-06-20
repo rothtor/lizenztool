@@ -138,13 +138,14 @@ function setupLanguageSwitcher() {
   switcher.innerHTML = `
     <button type="button" class="lang-btn" data-lang="en" title="English">EN</button>
     <button type="button" class="lang-btn" data-lang="de" title="Deutsch">DE</button>
+    <button type="button" class="reset-btn" title="Zurücksetzen / Reset" id="reset-btn">🔄</button>
   `;
 
   // Mark active language
   const activeBtn = switcher.querySelector(`[data-lang="${currentLanguage}"]`);
   if (activeBtn) activeBtn.classList.add('active');
 
-  // Add click handlers
+  // Add click handlers for language buttons
   switcher.querySelectorAll('.lang-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -156,6 +157,15 @@ function setupLanguageSwitcher() {
       btn.classList.add('active');
     });
   });
+
+  // Add reset handler
+  const resetBtn = switcher.querySelector('#reset-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      location.reload();
+    });
+  }
 
   header.appendChild(switcher);
 }

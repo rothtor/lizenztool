@@ -490,6 +490,33 @@ input::placeholder { color: #b8c0cc; }
   border-color: var(--fg);
 }
 
+.reset-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .35rem .65rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all .15s;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.2rem;
+  height: 2rem;
+}
+
+.reset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #fdf7f7;
+  transform: rotate(10deg);
+}
+
+.reset-btn:active {
+  transform: rotate(10deg) scale(0.95);
+}
+
 @media (max-width: 480px) {
   .lang-switcher {
     top: 0.75rem;
@@ -497,6 +524,7 @@ input::placeholder { color: #b8c0cc; }
     gap: .25rem;
   }
   .lang-btn { padding: .25rem .5rem; font-size: .65rem; }
+  .reset-btn { font-size: .85rem; min-width: 1.8rem; height: 1.8rem; }
 }
 
 /* ── Footer ──────────────────────────────────────── */
