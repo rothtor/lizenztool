@@ -1175,20 +1175,60 @@ async function fetchMetadata(file) {
   const seq = ++_metaSeq;
   try {
     const { default: exifr } = await import('/static/vendor/exifr.esm.js');
-    const raw = await exifr.parse(file, { xmp: true, iptc: true, exif: true, tiff: true, mergeOutput: false });
+    // Enable every block. exifr splits XMP into one object per namespace
+    // (dc, xmp, photoshop, and e.g. Canva's "ads"), so mergeOutput:false +
+    // walking ALL top-level keys is required to surface everything.
+    const raw = await exifr.parse(file, {
+      tiff: true, ifd0: true, exif: true, gps: true, interop: true,
+      ihdr: true, iptc: true, xmp: true, icc: true, jfif: true,
+      mergeOutput: false, translateKeys: true, translateValues: true, reviveValues: true,
+    });
     if (seq !== _metaSeq || !raw) return;
 
     const exifTags = raw.exif || {};
     const iptcTags = raw.iptc || {};
     const xmpTags  = raw.xmp  || {};
+    const dcTags   = raw.dc   || {};
+    const ifd0Tags = raw.ifd0 || {};
 
     function firstStr(...vals) {
-      for (const v of vals) {
+      for (let v of vals) {
         if (v == null) continue;
+        // Unwrap XMP alt-lang values like { lang: 'x-default', value: '…' }
+        if (typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date) && 'value' in v) v = v.value;
         const s = Array.isArray(v) ? String(v[0] ?? '') : String(v);
         if (s.trim()) return s.trim();
       }
       return '';
+    }
+
+    // Recursively flatten all metadata (nested XMP objects, alt-lang, arrays)
+    // into readable "namespace.Tag" → value pairs; skips binary blobs.
+    function flattenMeta(obj, out, prefix) {
+      for (const k in obj) {
+        let v = obj[k];
+        if (v == null || typeof v === 'function') continue;
+        const key = prefix ? `${prefix}.${k}` : k;
+        if (v instanceof Date) { out[key] = v.toISOString().slice(0, 19).replace('T', ' '); continue; }
+        if (ArrayBuffer.isView(v) || v instanceof ArrayBuffer) continue;
+        if (Array.isArray(v)) {
+          if (v.every(x => x == null || typeof x !== 'object')) {
+            const s = v.filter(x => x != null).join(', '); if (s) out[key] = s;
+          } else {
+            v.forEach((x, i) => x && typeof x === 'object'
+              ? flattenMeta(x, out, `${key}[${i}]`)
+              : (x != null && (out[`${key}[${i}]`] = String(x))));
+          }
+          continue;
+        }
+        if (typeof v === 'object') {
+          if ('value' in v && ('lang' in v || Object.keys(v).length <= 2)) out[key] = String(v.value);
+          else flattenMeta(v, out, key);
+          continue;
+        }
+        out[key] = String(v);
+      }
+      return out;
     }
 
     function extractYear(val) {
@@ -1201,15 +1241,20 @@ async function fetchMetadata(file) {
     const copyright_holder = firstStr(
       iptcTags.CopyrightNotice,
       xmpTags.Rights || xmpTags.rights,
-      exifTags.Copyright,
+      dcTags.rights || dcTags.Rights,
+      ifd0Tags.Copyright || exifTags.Copyright,
+      dcTags.creator || dcTags.Creator,
       xmpTags.Creator || xmpTags.creator,
+      ifd0Tags.Artist,
       iptcTags.ByLine || iptcTags['By-line'],
     );
     const year = extractYear(
       xmpTags.DateCreated
+      || (dcTags.date || dcTags.Date)
       || iptcTags.DateCreated
       || exifTags.DateTimeOriginal
-      || exifTags.CreateDate,
+      || exifTags.CreateDate
+      || ifd0Tags.ModifyDate,
     );
     const license_type = firstStr(
       xmpTags.UsageTerms,
@@ -1237,8 +1282,10 @@ async function fetchMetadata(file) {
 
     const metaDetails = document.getElementById("meta-details");
     const metaTable   = document.getElementById("meta-table");
-    const allMeta = { ...exifTags, ...iptcTags, ...xmpTags };
-    const entries = Object.entries(allMeta).filter(([, v]) => v != null && typeof v !== 'object' && typeof v !== 'function');
+    // Flatten EVERY block exifr returned (ifd0, exif, gps, ihdr, iptc, icc and
+    // each XMP namespace: dc, xmp, ads, …) so the table mirrors exiftool's output.
+    const flat = flattenMeta(raw, {}, '');
+    const entries = Object.entries(flat).filter(([, v]) => String(v).trim() !== '');
     if (entries.length > 0) {
       metaTable.innerHTML = "";
       for (const [k, v] of entries) {
