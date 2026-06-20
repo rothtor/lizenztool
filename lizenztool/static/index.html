@@ -710,13 +710,13 @@ const LICENSE_URLS = {
 };
 
 const SOURCES = {
-  twitter:   { license: null, placeholder: "@benutzername" },
-  instagram: { license: null, placeholder: "@benutzername / Instagram" },
-  flickr:    { license: "CC BY 4.0",          placeholder: "Name auf Flickr" },
-  wikimedia: { license: "CC BY-SA 4.0",       placeholder: "Name, Wikimedia Commons" },
-  dpa:       { license: "All Rights Reserved",       placeholder: "Name / dpa" },
-  dvids:     { license: "CC0 1.0 (Public Domain)",   placeholder: "Name / DVIDS" },
-  own:       { license: "CC BY 4.0",                 placeholder: "" },
+  twitter:   { license: null, placeholderKey: "sources.twitter_placeholder" },
+  instagram: { license: null, placeholderKey: "sources.instagram_placeholder" },
+  flickr:    { license: "CC BY 4.0",          placeholderKey: "sources.flickr_placeholder" },
+  wikimedia: { license: "CC BY-SA 4.0",       placeholderKey: "sources.wikimedia_placeholder" },
+  dpa:       { license: "All Rights Reserved",       placeholderKey: "sources.dpa_placeholder" },
+  dvids:     { license: "CC0 1.0 (Public Domain)",   placeholderKey: "sources.dvids_placeholder" },
+  own:       { license: "CC BY 4.0",                 placeholderKey: "sources.own_placeholder" },
 };
 
 // ── License detection from holder string ──────────
@@ -841,7 +841,7 @@ function setFile(file, name, keepUrl = false) {
   dropzone.append(_dzSvg, _dzSpan, _dzSmall);
   statusEl.className = ""; statusEl.style.display = "none";
   document.getElementById("meta-details").hidden = true;
-  document.getElementById("copy-btn").textContent = "Kopieren";
+  document.getElementById("copy-btn").textContent = t("ui.copy");
   navigator.clipboard.writeText("").catch(() => {});
   canvasImg = null;
   drawPlaceholder();
@@ -1007,7 +1007,7 @@ async function applyDvidsMetadata(assetId) {
 fetchBtn.addEventListener("click", async () => {
   const url = imageUrlInput.value.trim();
   if (!url) return;
-  setStatus("loading", "Bild wird geladen…");
+  setStatus("loading", t("ui.loading_image"));
   fetchBtn.disabled = true;
   try {
     const wmFilename = wikimediaFilename(url);
@@ -1038,7 +1038,7 @@ fetchBtn.addEventListener("click", async () => {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || "Laden fehlgeschlagen");
+      throw new Error(err.detail || t("ui.loading_failed"));
     }
     const blob = await res.blob();
     const filename = (wmFilename || fetchUrl.split("/").pop().split("?")[0]) || "image.jpg";
@@ -1046,18 +1046,18 @@ fetchBtn.addEventListener("click", async () => {
 
     if (wmFilename) {
       await fetchWikimediaMetadata(wmFilename);
-      setStatus("success", "Bild + Wikimedia-Metadaten geladen.");
+      setStatus("success", t("ui.wikimedia_loaded"));
     } else if (flickrId) {
       if (hasFlickrKey) {
         await applyFlickrMetadata(flickrId);
-        setStatus("success", "Bild + Flickr-Metadaten geladen.");
+        setStatus("success", t("ui.flickr_loaded"));
       } else {
         setStatus("success", t("ui.image_loaded") + " " + t("ui.flickr_tip"));
       }
     } else if (dvidsId) {
       if (hasDvidsKey) {
         await applyDvidsMetadata(dvidsId);
-        setStatus("success", "Bild + DVIDS-Metadaten geladen.");
+        setStatus("success", t("ui.dvids_loaded"));
       } else {
         setStatus("success", t("ui.image_loaded") + " " + t("ui.dvids_tip"));
       }
@@ -1065,7 +1065,7 @@ fetchBtn.addEventListener("click", async () => {
       setStatus("success", t("ui.image_loaded"));
     }
   } catch (err) {
-    setStatus("error", `Fehler: ${err.message}`);
+    setStatus("error", t("ui.error_prefix") + err.message);
   } finally {
     fetchBtn.disabled = false;
   }
@@ -1196,7 +1196,7 @@ document.querySelectorAll(".chip[data-src]").forEach(btn => {
         const opt = [...selLicense.options].find(o => o.value === data.license);
         if (opt) { selLicense.value = data.license; urlHidden.value = LICENSE_URLS[data.license] || ""; }
       }
-      document.getElementById("copyright_holder").placeholder = data.placeholder || t("ui.leave_empty");
+      document.getElementById("copyright_holder").placeholder = t(data.placeholderKey) || t("ui.leave_empty");
       syncAll();
     }
   });
@@ -1441,13 +1441,13 @@ form.addEventListener("submit", e => {
   e.preventDefault();
   if (!selectedFile) return;
   if (!canvasImg) {
-    setStatus("error", "Bild wird noch geladen, bitte einen Moment warten.");
+    setStatus("error", t("ui.image_still_loading"));
     return;
   }
 
   drawCanvas();
 
-  setStatus("loading", "Bild wird verarbeitet…");
+  setStatus("loading", t("ui.processing_image"));
   submitBtn.disabled = true;
 
   const ext      = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
@@ -1465,7 +1465,7 @@ form.addEventListener("submit", e => {
   try {
     previewCanvas.toBlob(blob => {
       if (!blob) {
-        setStatus("error", "Fehler: Canvas-Export fehlgeschlagen.");
+        setStatus("error", t("ui.canvas_export_failed"));
         submitBtn.disabled = false;
         return;
       }
@@ -1474,11 +1474,11 @@ form.addEventListener("submit", e => {
       a.download = dlName;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      setStatus("success", "Fertig! Das Bild wird heruntergeladen.");
+      setStatus("success", t("ui.download_success"));
       submitBtn.disabled = false;
     }, mimeType, quality);
   } catch (err) {
-    setStatus("error", `Fehler: ${err.message}`);
+    setStatus("error", t("ui.error_prefix") + err.message);
     submitBtn.disabled = false;
   }
 });

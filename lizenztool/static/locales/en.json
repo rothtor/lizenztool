@@ -51,7 +51,18 @@
     "cc_historic": "Contemporary: CC",
     "cc_4_released": "CC 4.0 was released Nov. 2013.",
     "cc_not_existed": "CC licenses existed from Dec. 2002.",
-    "dec_2002": "Dec. 2002"
+    "dec_2002": "Dec. 2002",
+    "loading_image": "Loading image…",
+    "loading_failed": "Loading failed",
+    "wikimedia_loaded": "Image + Wikimedia metadata loaded.",
+    "flickr_loaded": "Image + Flickr metadata loaded.",
+    "dvids_loaded": "Image + DVIDS metadata loaded.",
+    "error_prefix": "Error: ",
+    "image_still_loading": "Image is still loading, please wait a moment.",
+    "processing_image": "Processing image…",
+    "canvas_export_failed": "Error: Canvas export failed.",
+    "download_success": "Done! Image is downloading.",
+    "fetch_error": "Error: Could not load image."
   },
   "licenses": {
     "cc_by": "CC BY 4.0",
@@ -99,11 +110,18 @@
   },
   "sources": {
     "twitter": "X / Twitter",
+    "twitter_placeholder": "@username",
     "instagram": "Instagram",
+    "instagram_placeholder": "@username / Instagram",
     "flickr": "Flickr",
+    "flickr_placeholder": "Name on Flickr",
     "wikimedia": "Wikimedia",
+    "wikimedia_placeholder": "Name, Wikimedia Commons",
     "dpa": "dpa / AFP",
+    "dpa_placeholder": "Name / dpa",
     "dvids": "DVIDS",
-    "own": "Own photo"
+    "dvids_placeholder": "Name / DVIDS",
+    "own": "Own photo",
+    "own_placeholder": ""
   }
 }
