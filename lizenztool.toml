@@ -10,8 +10,8 @@ bar_color = [0, 0, 0]
 text_color = [255, 255, 255]
 
 # Text outline (stroke): width in pixels (0 = no outline)
-# text_stroke_width = 1.0
-# text_stroke_color = [0, 0, 0]
+text_stroke_width = 1.0
+text_stroke_color = [0, 0, 0]
 
 # Font: leave empty to auto-detect a system font
 # font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
