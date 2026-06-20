@@ -1286,9 +1286,9 @@ function syncCcInfo() {
 // ── Canvas preview ────────────────────────────────
 const previewCanvas = document.getElementById("preview-canvas");
 const PRESET_STYLE  = {
-  standard: { barRatio: 0.06, opacity: 200/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015 },
-  minimal:  { barRatio: 0.04, opacity: 150/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015 },
-  bold:     { barRatio: 0.09, opacity: 245/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015 },
+  standard: { barRatio: 0.06, opacity: 200/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, strokeWidth: 0, strokeColor: [0,0,0] },
+  minimal:  { barRatio: 0.04, opacity: 150/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, strokeWidth: 1.2, strokeColor: [0,0,0] },
+  bold:     { barRatio: 0.09, opacity: 245/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, strokeWidth: 0, strokeColor: [0,0,0] },
 };
 fetch("/api/presets").then(r => r.json()).then(data => {
   for (const [name, p] of Object.entries(data)) {
@@ -1299,6 +1299,8 @@ fetch("/api/presets").then(r => r.json()).then(data => {
       barColor:     p.bar_color  || [0, 0, 0],
       textColor:    p.text_color || [255, 255, 255],
       paddingRatio: p.padding_ratio || 0.015,
+      strokeWidth:  p.text_stroke_width || 0,
+      strokeColor:  p.text_stroke_color || [0, 0, 0],
     };
   }
   drawCanvas();
@@ -1347,11 +1349,22 @@ function drawCanvas() {
     const y        = H - barH;
     const [br, bg, bb] = style.barColor  || [0, 0, 0];
     const [tr, tg, tb] = style.textColor || [255, 255, 255];
+    const [sr, sg, sb] = style.strokeColor || [0, 0, 0];
+    const strokeWidth  = style.strokeWidth || 0;
+
     ctx.fillStyle   = `rgba(${br},${bg},${bb},${style.opacity})`;
     ctx.fillRect(0, y, W, barH);
     ctx.fillStyle   = `rgb(${tr},${tg},${tb})`;
     ctx.font        = `${fontSize}px system-ui, sans-serif`;
     ctx.textBaseline = "middle";
+
+    if (strokeWidth > 0) {
+      ctx.strokeStyle = `rgb(${sr},${sg},${sb})`;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.strokeText(text, pad, y + barH / 2);
+    }
     ctx.fillText(text, pad, y + barH / 2);
   }
 

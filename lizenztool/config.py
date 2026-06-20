@@ -10,6 +10,8 @@ class StyleConfig:
     bar_opacity: int = 200           # 0–255
     bar_color: tuple[int, int, int] = (0, 0, 0)
     text_color: tuple[int, int, int] = (255, 255, 255)
+    text_stroke_width: float = 1.0   # text outline width in pixels (0 = no outline)
+    text_stroke_color: tuple[int, int, int] = (0, 0, 0)  # outline color
     font_path: str = ""              # empty = auto-detect system font
     font_size: int = 0               # 0 = proportional to image height
     bar_ratio: float = 0.06          # bar height as fraction of image height
@@ -32,7 +34,7 @@ class IntegrationsConfig:
 def _default_presets() -> dict[str, "StyleConfig"]:
     return {
         "standard": StyleConfig(),
-        "minimal":  StyleConfig(bar_ratio=0.04, bar_opacity=150),
+        "minimal":  StyleConfig(bar_ratio=0.04, bar_opacity=150, text_stroke_width=1.2),
         "bold":     StyleConfig(bar_ratio=0.09, bar_opacity=245),
     }
 
@@ -97,6 +99,8 @@ def _parse_style(s: dict) -> StyleConfig:
         bar_opacity=int(s.get("bar_opacity", 200)),
         bar_color=_parse_color(s["bar_color"]) if "bar_color" in s else (0, 0, 0),
         text_color=_parse_color(s["text_color"]) if "text_color" in s else (255, 255, 255),
+        text_stroke_width=float(s.get("text_stroke_width", 1.0)),
+        text_stroke_color=_parse_color(s["text_stroke_color"]) if "text_stroke_color" in s else (0, 0, 0),
         font_path=s.get("font_path", ""),
         font_size=int(s.get("font_size", 0)),
         bar_ratio=float(s.get("bar_ratio", 0.06)),
