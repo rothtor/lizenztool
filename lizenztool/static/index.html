@@ -1320,22 +1320,22 @@ function _historicLicenseUrl(val) {
 function syncCcInfo() {
   const val = selLicense.value;
   if (!val) {
-    ccInfo.innerHTML = t("ui.select_license_details", "Select license for details");
+    ccInfo.innerHTML = t("ui.select_license_details");
     ccInfo.className = "empty";
     return;
   }
   const ccData = getCC_DATA();
   const d = ccData[val] || _historicLicenseInfo(val);
   if (!d) {
-    ccInfo.innerHTML = t("ui.select_license_details", "Select license for details");
+    ccInfo.innerHTML = t("ui.select_license_details");
     ccInfo.className = "empty";
     return;
   }
   ccInfo.className = "";
   ccInfo.innerHTML = `<strong>${esc(val)}</strong>
-    <div class="cc-row">${t("ui.allowed", "Allowed")}: <span class="cc-val">${d.erlaubt}</span></div>
-    <div class="cc-row">${t("ui.requirement", "Requirement")}: <span class="cc-val">${d.bedingung}</span></div>
-    ${d.url ? `<a href="${d.url}" target="_blank" rel="noopener">${t("ui.read_full_text", "Read full text")} ↗</a>` : ""}`;
+    <div class="cc-row">${t("ui.allowed")}: <span class="cc-val">${d.erlaubt}</span></div>
+    <div class="cc-row">${t("ui.requirement")}: <span class="cc-val">${d.bedingung}</span></div>
+    ${d.url ? `<a href="${d.url}" target="_blank" rel="noopener">${t("ui.read_full_text")} ↗</a>` : ""}`;
 }
 
 // ── Canvas preview ────────────────────────────────
@@ -1511,11 +1511,11 @@ function updateLicenseYearHints(yearStr) {
     else selLicense.appendChild(group);
   }
 
-  if (year >= 2013)      yearHint.textContent = t("ui.cc_4_contemporary");
-  else if (year >= 2007) yearHint.textContent = `${t("ui.cc_historic")} ${hVer}. ${t("ui.cc_4_released")}`;
-  else if (year >= 2004) yearHint.textContent = `${t("ui.cc_historic")} ${hVer}. ${t("ui.cc_4_released")}`;
-  else if (year >= 2002) yearHint.textContent = `${t("ui.cc_historic")} 1.0 (${t("ui.dec_2002")}). ${t("ui.cc_4_released")}`;
-  else                   yearHint.textContent = t("ui.cc_not_existed");
+  if (year >= 2013)      yearHint.textContent = t("ui.cc_4_contemporary", "CC 4.0 was contemporary for this year.");
+  else if (year >= 2007) yearHint.textContent = `${t("ui.cc_historic", "Contemporary:")} ${hVer}. ${t("ui.cc_4_released", "CC 4.0 was released Nov. 2013.")}`;
+  else if (year >= 2004) yearHint.textContent = `${t("ui.cc_historic", "Contemporary:")} ${hVer}. ${t("ui.cc_4_released", "CC 4.0 was released Nov. 2013.")}`;
+  else if (year >= 2002) yearHint.textContent = `${t("ui.cc_historic", "Contemporary:")} 1.0 (${t("ui.dec_2002", "Dec. 2002")}). ${t("ui.cc_4_released", "CC 4.0 was released Nov. 2013.")}`;
+  else                   yearHint.textContent = t("ui.cc_not_existed", "CC licenses existed from Dec. 2002.");
 }
 
 // ── Inputs → preview ──────────────────────────────
@@ -1531,9 +1531,21 @@ holderEl.addEventListener("blur", () => { if (applyLicenseDetection(holderEl.val
 const _initYear = new Date().getFullYear();
 document.getElementById("year").value = _initYear;
 urlHidden.value = "";
-updateLicenseYearHints(String(_initYear));
-syncAll();
-drawPlaceholder();
+
+// Wait for i18n to be fully initialized before using t()
+window._initLizenztoolUI = function() {
+  updateLicenseYearHints(String(_initYear));
+  syncAll();
+  drawPlaceholder();
+};
+
+// Call immediately if i18n already loaded, or wait for it
+if (typeof i18nData !== 'undefined' && Object.keys(i18nData).length > 0) {
+  window._initLizenztoolUI();
+} else {
+  // Fallback: try again after a small delay
+  setTimeout(window._initLizenztoolUI, 100);
+}
 
 // ── Setup reset button ────────────────────────────
 window.selectedFile = selectedFile;
