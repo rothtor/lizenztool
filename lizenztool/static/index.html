@@ -265,6 +265,13 @@ input::placeholder { color: #b8c0cc; }
   margin-top: .25rem;
 }
 #cc-info a:hover { text-decoration: underline; }
+#cc-info .cc-note {
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--cc-border);
+  font-size: .7rem;
+  color: var(--muted);
+}
 #cc-info.empty { color: var(--muted); font-style: italic; display: flex; align-items: center; }
 
 /* ── Source chips ────────────────────────────────── */
@@ -707,7 +714,7 @@ footer a:hover {
       <!-- Lizenz -->
       <div class="field">
         <label class="fl" for="license_type_select" data-i18n="ui.license">Lizenz</label>
-        <select id="license_type_select">
+        <select id="license_type_select" autocomplete="off">
           <option value="" disabled selected data-i18n="ui.choose_license">-- Lizenz wählen --</option>
           <option value="CC BY 4.0">CC BY 4.0</option>
           <option value="CC BY-SA 4.0">CC BY-SA 4.0</option>
@@ -722,13 +729,6 @@ footer a:hover {
 
       <div id="year-hint"></div>
       <input type="hidden" id="license_url" name="license_url">
-
-      <!-- CC Version Notice -->
-      <div style="background:var(--cc-bg);border:1px solid var(--cc-border);border-radius:10px;padding:.8rem 1rem;margin-bottom:.85rem;font-size:.8rem;line-height:1.6">
-        <strong style="display:block;margin-bottom:.3rem" data-i18n="cc.version_title">ℹ Creative Commons 4.0</strong>
-        <p style="margin:0 0 .4rem 0;color:var(--muted)" data-i18n="cc.version_description">Diese App nutzt CC 4.0 Lizenzen. Ältere Inhalte können unter CC 2.0 oder 3.0 stehen.</p>
-        <small style="display:block;color:var(--muted)" data-i18n="cc.version_note">Prüfe das Veröffentlichungsdatum des ursprünglichen Werks.</small>
-      </div>
 
       <!-- CC Info Box -->
       <div id="cc-info" class="empty" data-i18n="ui.select_license_details">Lizenz auswählen für Details</div>
@@ -1337,10 +1337,12 @@ function syncCcInfo() {
     return;
   }
   ccInfo.className = "";
+  const isCC = val.startsWith("CC");
   ccInfo.innerHTML = `<strong>${esc(val)}</strong>
     <div class="cc-row">${t("ui.allowed")}: <span class="cc-val">${d.erlaubt}</span></div>
     <div class="cc-row">${t("ui.requirement")}: <span class="cc-val">${d.bedingung}</span></div>
-    ${d.url ? `<a href="${d.url}" target="_blank" rel="noopener">${t("ui.read_full_text")} ↗</a>` : ""}`;
+    ${d.url ? `<a href="${d.url}" target="_blank" rel="noopener">${t("ui.read_full_text")} ↗</a>` : ""}
+    ${isCC ? `<div class="cc-note">${t("cc.version_note")}</div>` : ""}`;
 }
 
 // ── Canvas preview ────────────────────────────────
@@ -1541,6 +1543,10 @@ urlHidden.value = "";
 window._initLizenztoolUI = function() {
   if (window._initLizenztoolUI._done) return; // Prevent double-call
   window._initLizenztoolUI._done = true;
+
+  // Force placeholder selection (guard against browser form restoration on reload)
+  selLicense.selectedIndex = 0;
+  urlHidden.value = "";
 
   updateLicenseYearHints(String(_initYear));
   syncAll();
