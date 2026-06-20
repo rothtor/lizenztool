@@ -138,7 +138,7 @@ function setupLanguageSwitcher() {
   switcher.innerHTML = `
     <button type="button" class="lang-btn" data-lang="en" title="English">EN</button>
     <button type="button" class="lang-btn" data-lang="de" title="Deutsch">DE</button>
-    <button type="button" class="reset-btn" title="Zurücksetzen / Reset" id="reset-btn">🔄</button>
+    <button type="button" class="reset-btn" title="Reset" id="reset-btn">↻</button>
   `;
 
   // Mark active language
