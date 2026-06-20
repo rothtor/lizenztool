@@ -80,7 +80,7 @@ License information is requested interactively. If metadata already exists in th
 
 ## Web Application
 
-### Development / Local Start
+### Development
 
 ```bash
 uvicorn lizenztool.api:app --reload
@@ -88,7 +88,7 @@ uvicorn lizenztool.api:app --reload
 
 The interface is available at [http://localhost:8000](http://localhost:8000).
 
-### Docker Compose (Production)
+### Docker
 
 ```bash
 # Build image
@@ -183,8 +183,6 @@ This installs:
 - **pytest-cov** (coverage reporting)
 - **httpx** (async HTTP client for FastAPI TestClient)
 
-#### Run All Tests
-
 ```bash
 # Run all tests with summary
 pytest tests/
@@ -195,27 +193,6 @@ pytest tests/ -v
 # Run with coverage report
 pytest tests/ --cov=lizenztool --cov-report=term-missing
 ```
-
-#### Run Specific Test Suites
-
-```bash
-# API endpoint tests (SSRF, rate limiting, input validation)
-pytest tests/test_api_endpoints.py -v
-
-# Core API functions (IP detection, format detection, logging)
-pytest tests/test_api_core.py -v
-
-# Configuration parsing
-pytest tests/test_config.py -v
-
-# Metadata extraction (EXIF/IPTC/XMP)
-pytest tests/test_metadata.py -v
-
-# Security tests (SSRF, injection, file size limits)
-pytest tests/test_security.py -v
-```
-
-#### Test Coverage
 
 Current coverage:
 - **API module**: 90% (186 statements)
