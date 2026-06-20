@@ -510,6 +510,59 @@ input::placeholder { color: #b8c0cc; }
   .lang-btn { padding: .25rem .5rem; font-size: .65rem; }
 }
 
+/* ── Image Modal ─────────────────────────────────── */
+#image-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+#image-modal.open {
+  display: flex;
+}
+
+#image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+#image-modal-img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 8px;
+}
+
+#image-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+#image-modal-close:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
 /* ── Footer ──────────────────────────────────────── */
 footer {
   position: fixed;
@@ -678,6 +731,13 @@ footer a:hover {
   </section>
 
 </main>
+
+<div id="image-modal">
+  <div id="image-modal-content">
+    <button type="button" id="image-modal-close">✕</button>
+    <img id="image-modal-img" alt="Preview">
+  </div>
+</div>
 
 <footer>
   <a href="https://github.com/rothtor/lizenztool" target="_blank" rel="noopener">GitHub</a>
@@ -1435,6 +1495,34 @@ urlHidden.value = "";
 updateLicenseYearHints(String(_initYear));
 syncAll();
 drawPlaceholder();
+
+// ── Image Modal ───────────────────────────────────
+const imageModal = document.getElementById("image-modal");
+const imageModalImg = document.getElementById("image-modal-img");
+const imageModalClose = document.getElementById("image-modal-close");
+
+previewCanvas.addEventListener("click", () => {
+  if (canvasImg) {
+    imageModalImg.src = previewObjUrl || canvasImg.src;
+    imageModal.classList.add("open");
+  }
+});
+
+imageModalClose.addEventListener("click", () => {
+  imageModal.classList.remove("open");
+});
+
+imageModal.addEventListener("click", (e) => {
+  if (e.target === imageModal) {
+    imageModal.classList.remove("open");
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && imageModal.classList.contains("open")) {
+    imageModal.classList.remove("open");
+  }
+});
 
 // ── Submit ────────────────────────────────────────
 form.addEventListener("submit", e => {
