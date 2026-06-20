@@ -149,6 +149,10 @@ async def presets_info() -> dict:
             "bar_opacity":   s.bar_opacity,
             "bar_color":     list(s.bar_color),
             "text_color":    list(s.text_color),
+            "text_stroke": {
+                "width": s.text_stroke.width,
+                "color": list(s.text_stroke.color),
+            },
             "font_size":     s.font_size,
             "padding_ratio": s.padding_ratio,
         }
