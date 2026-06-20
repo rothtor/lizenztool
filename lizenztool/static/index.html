@@ -803,7 +803,7 @@ fileInput.addEventListener("change",   ()=> { if (fileInput.files[0]) setFile(fi
 
 function resetForm() {
   document.getElementById("copyright_holder").value = "";
-  document.getElementById("copyright_holder").placeholder = "leer = ohne Name";
+  document.getElementById("copyright_holder").placeholder = t("ui.leave_empty");
   document.getElementById("year").value = new Date().getFullYear();
   selLicense.value   = "";
   urlHidden.value    = "";
@@ -837,7 +837,7 @@ function setFile(file, name, keepUrl = false) {
   _dzSpan.textContent = displayName;
   const _dzSmall = document.createElement("small");
   _dzSmall.style.cssText = "opacity:.55;font-size:.7rem;flex-shrink:0";
-  _dzSmall.textContent = `${size} · klicken`;
+  _dzSmall.textContent = `${size} · ${t("ui.click_to_select")}`;
   dropzone.append(_dzSvg, _dzSpan, _dzSmall);
   statusEl.className = ""; statusEl.style.display = "none";
   document.getElementById("meta-details").hidden = true;
@@ -1127,6 +1127,7 @@ async function fetchMetadata(file) {
 
     if (copyright_holder) {
       document.getElementById("copyright_holder").value = copyright_holder.slice(0, 200);
+      document.getElementById("copyright_holder").placeholder = t("ui.leave_empty");
       applyLicenseDetection(copyright_holder);
     }
     if (year) { document.getElementById("year").value = year; updateLicenseYearHints(year); }
@@ -1182,7 +1183,7 @@ document.querySelectorAll(".chip[data-src]").forEach(btn => {
     if (activeSource === src) {
       activeSource = null;
       btn.classList.remove("active");
-      document.getElementById("copyright_holder").placeholder = "leer = ohne Name";
+      document.getElementById("copyright_holder").placeholder = t("ui.leave_empty");
     } else {
       document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
       activeSource = src;
@@ -1195,7 +1196,7 @@ document.querySelectorAll(".chip[data-src]").forEach(btn => {
         const opt = [...selLicense.options].find(o => o.value === data.license);
         if (opt) { selLicense.value = data.license; urlHidden.value = LICENSE_URLS[data.license] || ""; }
       }
-      document.getElementById("copyright_holder").placeholder = data.placeholder || "leer = ohne Name";
+      document.getElementById("copyright_holder").placeholder = data.placeholder || t("ui.leave_empty");
       syncAll();
     }
   });
