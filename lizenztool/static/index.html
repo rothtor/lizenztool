@@ -1052,17 +1052,17 @@ fetchBtn.addEventListener("click", async () => {
         await applyFlickrMetadata(flickrId);
         setStatus("success", "Bild + Flickr-Metadaten geladen.");
       } else {
-        setStatus("success", "Bild geladen. Tipp: Flickr API-Schlüssel in lizenztool.toml eintragen für automatische Metadaten.");
+        setStatus("success", t("ui.image_loaded") + " " + t("ui.flickr_tip"));
       }
     } else if (dvidsId) {
       if (hasDvidsKey) {
         await applyDvidsMetadata(dvidsId);
         setStatus("success", "Bild + DVIDS-Metadaten geladen.");
       } else {
-        setStatus("success", "Bild geladen. Tipp: DVIDS API-Schlüssel in lizenztool.toml eintragen für automatische Metadaten.");
+        setStatus("success", t("ui.image_loaded") + " " + t("ui.dvids_tip"));
       }
     } else {
-      setStatus("success", "Bild geladen.");
+      setStatus("success", t("ui.image_loaded"));
     }
   } catch (err) {
     setStatus("error", `Fehler: ${err.message}`);
@@ -1399,7 +1399,7 @@ function updateLicenseYearHints(yearStr) {
   const hVer = _historicVersion(year);
   if (hVer) {
     const group = document.createElement("optgroup");
-    group.label = `Zeitgemäß ${year}: CC ${hVer}`;
+    group.label = `${t("ui.historic_cc")} ${year}: CC ${hVer}`;
     group.dataset.historic = "1";
     for (const v of _HISTORIC_VARIANTS) {
       const opt = document.createElement("option");
@@ -1412,11 +1412,11 @@ function updateLicenseYearHints(yearStr) {
     else selLicense.appendChild(group);
   }
 
-  if (year >= 2013)      yearHint.textContent = "CC 4.0 war zeitgemäß für dieses Jahr.";
-  else if (year >= 2007) yearHint.textContent = `Zeitgemäß: CC ${hVer}. CC 4.0 erschien erst Nov. 2013.`;
-  else if (year >= 2004) yearHint.textContent = `Zeitgemäß: CC ${hVer}. CC 4.0 erschien erst Nov. 2013.`;
-  else if (year >= 2002) yearHint.textContent = "Zeitgemäß: CC 1.0 (Dez. 2002). CC 4.0 erschien erst Nov. 2013.";
-  else                   yearHint.textContent = "CC-Lizenzen gab es erst ab Dez. 2002.";
+  if (year >= 2013)      yearHint.textContent = t("ui.cc_4_contemporary");
+  else if (year >= 2007) yearHint.textContent = `${t("ui.cc_historic")} ${hVer}. ${t("ui.cc_4_released")}`;
+  else if (year >= 2004) yearHint.textContent = `${t("ui.cc_historic")} ${hVer}. ${t("ui.cc_4_released")}`;
+  else if (year >= 2002) yearHint.textContent = `${t("ui.cc_historic")} 1.0 (${t("ui.dec_2002")}). ${t("ui.cc_4_released")}`;
+  else                   yearHint.textContent = t("ui.cc_not_existed");
 }
 
 // ── Inputs → preview ──────────────────────────────

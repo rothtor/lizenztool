@@ -42,7 +42,16 @@
     "flickr_loaded": "Image + Flickr metadata loaded.",
     "dvids_loaded": "Image + DVIDS metadata loaded.",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "image_loaded": "Image loaded.",
+    "flickr_tip": "Tip: Enter Flickr API key in lizenztool.toml for automatic metadata.",
+    "dvids_tip": "Tip: Enter DVIDS API key in lizenztool.toml for automatic metadata.",
+    "historic_cc": "Contemporary for",
+    "cc_4_contemporary": "CC 4.0 was contemporary for this year.",
+    "cc_historic": "Contemporary: CC",
+    "cc_4_released": "CC 4.0 was released Nov. 2013.",
+    "cc_not_existed": "CC licenses existed from Dec. 2002.",
+    "dec_2002": "Dec. 2002"
   },
   "licenses": {
     "cc_by": "CC BY 4.0",
