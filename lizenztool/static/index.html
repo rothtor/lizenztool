@@ -303,43 +303,6 @@ input::placeholder { color: #b8c0cc; }
 .style-chip:hover  { border-color: var(--fg); color: var(--fg); }
 .style-chip.active { background: var(--fg); color: #fff; border-color: var(--fg); }
 
-/* ── License Grid ────────────────────────────────── */
-#license-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.license-btn {
-  background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--fg);
-  font-family: inherit;
-  transition: all 0.15s;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.license-btn:hover {
-  border-color: var(--accent);
-  background: #fdf7f7;
-}
-
-.license-btn.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
 /* ── Toggle ──────────────────────────────────────── */
 .toggle-row {
   display: flex;
@@ -739,32 +702,31 @@ footer a:hover {
 
       <!-- Lizenz -->
       <div class="field">
-        <label class="fl" data-i18n="ui.license">Lizenz</label>
-        <div id="license-grid">
-          <button type="button" class="license-btn" data-license="CC BY 4.0">CC BY</button>
-          <button type="button" class="license-btn" data-license="CC BY-SA 4.0">CC BY-SA</button>
-          <button type="button" class="license-btn" data-license="CC BY-NC 4.0">CC BY-NC</button>
-          <button type="button" class="license-btn" data-license="CC BY-NC-SA 4.0">CC BY-NC-SA</button>
-          <button type="button" class="license-btn" data-license="CC BY-ND 4.0">CC BY-ND</button>
-          <button type="button" class="license-btn" data-license="CC BY-NC-ND 4.0">CC BY-NC-ND</button>
-          <button type="button" class="license-btn" data-license="CC0 1.0 (Public Domain)">CC0</button>
-          <button type="button" class="license-btn" data-license="All Rights Reserved">All Rights</button>
-          <button type="button" class="license-btn" data-license="">Custom…</button>
-        </div>
-        <select id="license_type_select" hidden>
-          <option value=""></option>
+        <label class="fl" for="license_type_select" data-i18n="ui.license">Lizenz</label>
+        <select id="license_type_select">
+          <option value="" disabled selected data-i18n="ui.choose_license">-- Lizenz wählen --</option>
+          <option value="CC BY 4.0">CC BY 4.0</option>
+          <option value="CC BY-SA 4.0">CC BY-SA 4.0</option>
+          <option value="CC BY-NC 4.0">CC BY-NC 4.0</option>
+          <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0</option>
+          <option value="CC BY-ND 4.0">CC BY-ND 4.0</option>
+          <option value="CC BY-NC-ND 4.0">CC BY-NC-ND 4.0</option>
+          <option value="CC0 1.0 (Public Domain)">CC0 1.0 (Public Domain)</option>
+          <option value="All Rights Reserved">All Rights Reserved</option>
         </select>
-      </div>
-
-      <div class="field" id="custom-field" hidden>
-        <label class="fl" for="license_type_custom" data-i18n="ui.custom_license">Eigene Bezeichnung</label>
-        <input type="text" id="license_type_custom" placeholder="e.g. License XY 1.0" data-i18n-placeholder="ui.custom_license_placeholder">
       </div>
 
       <div id="year-hint"></div>
       <input type="hidden" id="license_url" name="license_url">
 
-      <!-- CC Info -->
+      <!-- CC Version Notice -->
+      <div style="background:var(--cc-bg);border:1px solid var(--cc-border);border-radius:10px;padding:.8rem 1rem;margin-bottom:.85rem;font-size:.8rem;line-height:1.6">
+        <strong style="display:block;margin-bottom:.3rem" data-i18n="cc.version_title">ℹ Creative Commons 4.0</strong>
+        <p style="margin:0 0 .4rem 0;color:var(--muted)" data-i18n="cc.version_description">Diese App nutzt CC 4.0 Lizenzen. Ältere Inhalte können unter CC 2.0 oder 3.0 stehen.</p>
+        <small style="display:block;color:var(--muted)" data-i18n="cc.version_note">Prüfe das Veröffentlichungsdatum des ursprünglichen Werks.</small>
+      </div>
+
+      <!-- CC Info Box -->
       <div id="cc-info" class="empty" data-i18n="ui.select_license_details">Lizenz auswählen für Details</div>
 
       <div class="section-divider"></div>
@@ -888,11 +850,8 @@ function applyLicenseDetection(holderValue) {
   if (opt) {
     selLicense.value = result.license;
     urlHidden.value = LICENSE_URLS[result.license] || "";
-    customField.hidden = true;
   } else {
     selLicense.value = "";
-    customInput.value = result.license;
-    customField.hidden = false;
   }
   return true;
 }
@@ -908,8 +867,6 @@ const imageUrlInput = document.getElementById("image-url");
 const fetchBtn      = document.getElementById("fetch-btn");
 const form          = document.getElementById("license-form");
 const selLicense    = document.getElementById("license_type_select");
-const customField   = document.getElementById("custom-field");
-const customInput   = document.getElementById("license_type_custom");
 const urlHidden     = document.getElementById("license_url");
 const ccInfo        = document.getElementById("cc-info");
 const statusEl      = document.getElementById("status");
@@ -940,7 +897,6 @@ function resetForm(skipSync = false) {
   document.getElementById("copyright_holder").placeholder = t("ui.leave_empty");
   document.getElementById("year").value = new Date().getFullYear();
   updateLicenseFromValue("");
-  customInput.value  = "";
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   activeSource = null;
   if (!skipSync) syncAll();
@@ -1050,11 +1006,8 @@ async function fetchWikimediaMetadata(filename) {
     if (opt) {
       selLicense.value = normalized;
       urlHidden.value = LICENSE_URLS[normalized] || "";
-      customField.hidden = true;
     } else {
       selLicense.value = "";
-      customInput.value = license;
-      customField.hidden = false;
     }
   }
 
@@ -1094,8 +1047,8 @@ async function applyFlickrMetadata(photoId) {
   if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
   if (m.license) {
     const opt = [...selLicense.options].find(o => o.value === m.license);
-    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; customField.hidden = true; }
-    else { selLicense.value = ""; customInput.value = m.license; customField.hidden = false; }
+    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; }
+    else { selLicense.value = ""; }
   }
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   document.querySelector(".chip[data-src=flickr]")?.classList.add("active");
@@ -1127,7 +1080,7 @@ async function applyDvidsMetadata(assetId) {
   if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
   if (m.license) {
     const opt = [...selLicense.options].find(o => o.value === m.license);
-    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; customField.hidden = true; }
+    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; }
   }
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   document.querySelector(".chip[data-src=dvids]")?.classList.add("active");
@@ -1266,7 +1219,6 @@ async function fetchMetadata(file) {
     if (license_type && selLicense.value === "") {
       const opt = [...selLicense.options].find(o => o.value === license_type);
       if (opt) selLicense.value = license_type;
-      else { selLicense.value = ""; customInput.value = license_type; }
     }
     if (license_url) urlHidden.value = license_url;
     syncAll();
@@ -1295,17 +1247,11 @@ async function fetchMetadata(file) {
   }
 }
 
-// ── License change (via buttons or select) ────────
+// ── License change (via select) ──────────────────
 function updateLicenseFromValue(val) {
   selLicense.value = val;
-  customField.hidden = val !== "";
-  if (!val) customInput.value = "";
   if (val) urlHidden.value = LICENSE_URLS[val] || _historicLicenseUrl(val);
-
-  // Update button states
-  document.querySelectorAll(".license-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.license === val);
-  });
+  else urlHidden.value = "";
 
   syncCcInfo();
   updatePreview();
@@ -1314,16 +1260,6 @@ function updateLicenseFromValue(val) {
 selLicense.addEventListener("change", () => {
   updateLicenseFromValue(selLicense.value);
 });
-
-// License grid buttons
-document.querySelectorAll(".license-btn").forEach(btn => {
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    updateLicenseFromValue(btn.dataset.license);
-  });
-});
-
-customInput.addEventListener("input", updatePreview);
 
 // ── Source chips ──────────────────────────────────
 document.querySelectorAll(".chip[data-src]").forEach(btn => {
@@ -1341,7 +1277,6 @@ document.querySelectorAll(".chip[data-src]").forEach(btn => {
       btn.classList.add("active");
       if (data.license === null) {
         selLicense.value  = "";
-        customInput.value = "";
         urlHidden.value   = "";
       } else {
         const opt = [...selLicense.options].find(o => o.value === data.license);
@@ -1383,10 +1318,19 @@ function _historicLicenseUrl(val) {
 
 // ── CC Info ───────────────────────────────────────
 function syncCcInfo() {
-  const val = selLicense.value || customInput.value.trim();
+  const val = selLicense.value;
+  if (!val) {
+    ccInfo.innerHTML = t("ui.select_license_details", "Select license for details");
+    ccInfo.className = "empty";
+    return;
+  }
   const ccData = getCC_DATA();
   const d = ccData[val] || _historicLicenseInfo(val);
-  if (!d) { ccInfo.innerHTML = t("ui.select_license_details", "Lizenz auswählen für Details"); ccInfo.className = "empty"; return; }
+  if (!d) {
+    ccInfo.innerHTML = t("ui.select_license_details", "Select license for details");
+    ccInfo.className = "empty";
+    return;
+  }
   ccInfo.className = "";
   ccInfo.innerHTML = `<strong>${esc(val)}</strong>
     <div class="cc-row">${t("ui.allowed", "Allowed")}: <span class="cc-val">${d.erlaubt}</span></div>
@@ -1490,7 +1434,7 @@ function drawCanvas() {
 function overlayText() {
   const holder  = document.getElementById("copyright_holder").value.trim();
   const year    = document.getElementById("year").value.trim();
-  const licType = selLicense.value || customInput.value.trim();
+  const licType = selLicense.value || "";
   const parts   = [];
   if (holder) parts.push(year ? `© ${year} ${holder}` : `© ${holder}`);
   if (licType) parts.push(licType);
@@ -1507,8 +1451,7 @@ function updateTextPreview() {
 
 function updatePreview() { drawCanvas(); updateTextPreview(); }
 
-function syncCustomField() { customField.hidden = selLicense.value !== ""; }
-function syncAll() { syncCustomField(); syncCcInfo(); updatePreview(); }
+function syncAll() { syncCcInfo(); updatePreview(); }
 
 // ── CC version year hints ─────────────────────────
 const _VER_RELEASE = {
@@ -1532,8 +1475,9 @@ function updateLicenseYearHints(yearStr) {
   const year = parseInt(yearStr, 10);
   const valid = yearStr && yearStr.length === 4 && !isNaN(year);
 
-  // Remove previously injected historic optgroup
-  selLicense.querySelectorAll("optgroup[data-historic]").forEach(el => el.remove());
+  // Remove previously injected historic optgroup (if any were added before)
+  const historicGroup = selLicense.querySelector("optgroup[data-historic]");
+  if (historicGroup) historicGroup.remove();
   [...selLicense.options].forEach(o => o.classList.remove("opt-future", "opt-current"));
 
   if (!valid) { yearHint.textContent = ""; return; }

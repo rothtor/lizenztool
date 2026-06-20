@@ -7,6 +7,7 @@
     "leave_empty": "leave empty for none",
     "year": "Year",
     "license": "License",
+    "choose_license": "-- Choose license --",
     "custom_license": "Custom license…",
     "custom_name": "Custom name",
     "custom_license_placeholder": "e.g. License XY 1.0",
@@ -73,6 +74,11 @@
     "cc_by_nc_nd": "CC BY-NC-ND 4.0",
     "cc0": "CC0 1.0 (Public Domain)",
     "all_rights": "All Rights Reserved"
+  },
+  "cc": {
+    "version_title": "ℹ Creative Commons 4.0",
+    "version_description": "This app uses CC 4.0 licenses. Older content may be under CC 2.0 or 3.0.",
+    "version_note": "Check the publication date of the original work."
   },
   "cc_info": {
     "cc_by": {

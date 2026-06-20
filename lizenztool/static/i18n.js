@@ -180,7 +180,6 @@ function setupLanguageSwitcher() {
         document.getElementById('copyright_holder').value = '';
         document.getElementById('year').value = new Date().getFullYear();
         document.getElementById('license_type_select').value = '';
-        document.getElementById('license_type_custom').value = '';
         document.getElementById('license_url').value = '';
         document.getElementById('image-url').value = '';
         document.getElementById('file-input').value = '';
