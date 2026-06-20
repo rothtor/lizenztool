@@ -12,6 +12,10 @@ COPY lizenztool.toml .
 
 RUN pip install --no-cache-dir .
 
+# Commit hash baked at build time (shown in footer); overridable at runtime via env.
+ARG GIT_COMMIT=dev
+ENV BUILD_COMMIT=${GIT_COMMIT}
+
 RUN useradd -m -u 1000 appuser && chown -R appuser /app
 USER appuser
 
