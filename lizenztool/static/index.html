@@ -303,6 +303,43 @@ input::placeholder { color: #b8c0cc; }
 .style-chip:hover  { border-color: var(--fg); color: var(--fg); }
 .style-chip.active { background: var(--fg); color: #fff; border-color: var(--fg); }
 
+/* ── License Grid ────────────────────────────────── */
+#license-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.license-btn {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--fg);
+  font-family: inherit;
+  transition: all 0.15s;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.license-btn:hover {
+  border-color: var(--accent);
+  background: #fdf7f7;
+}
+
+.license-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* ── Toggle ──────────────────────────────────────── */
 .toggle-row {
   display: flex;
@@ -702,17 +739,20 @@ footer a:hover {
 
       <!-- Lizenz -->
       <div class="field">
-        <label class="fl" for="license_type_select" data-i18n="ui.license">Lizenz</label>
-        <select id="license_type_select">
-          <option value="CC BY 4.0">CC BY 4.0</option>
-          <option value="CC BY-SA 4.0">CC BY-SA 4.0</option>
-          <option value="CC BY-NC 4.0">CC BY-NC 4.0</option>
-          <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0</option>
-          <option value="CC BY-ND 4.0">CC BY-ND 4.0</option>
-          <option value="CC BY-NC-ND 4.0">CC BY-NC-ND 4.0</option>
-          <option value="CC0 1.0 (Public Domain)">CC0 1.0 – Gemeinfrei</option>
-          <option value="All Rights Reserved">Alle Rechte vorbehalten</option>
-          <option value="">Eigene Lizenz…</option>
+        <label class="fl" data-i18n="ui.license">Lizenz</label>
+        <div id="license-grid">
+          <button type="button" class="license-btn" data-license="CC BY 4.0">CC BY</button>
+          <button type="button" class="license-btn" data-license="CC BY-SA 4.0">CC BY-SA</button>
+          <button type="button" class="license-btn" data-license="CC BY-NC 4.0">CC BY-NC</button>
+          <button type="button" class="license-btn" data-license="CC BY-NC-SA 4.0">CC BY-NC-SA</button>
+          <button type="button" class="license-btn" data-license="CC BY-ND 4.0">CC BY-ND</button>
+          <button type="button" class="license-btn" data-license="CC BY-NC-ND 4.0">CC BY-NC-ND</button>
+          <button type="button" class="license-btn" data-license="CC0 1.0 (Public Domain)">CC0</button>
+          <button type="button" class="license-btn" data-license="All Rights Reserved">All Rights</button>
+          <button type="button" class="license-btn" data-license="">Custom…</button>
+        </div>
+        <select id="license_type_select" hidden>
+          <option value=""></option>
         </select>
       </div>
 
@@ -899,10 +939,8 @@ function resetForm(skipSync = false) {
   document.getElementById("copyright_holder").value = "";
   document.getElementById("copyright_holder").placeholder = t("ui.leave_empty");
   document.getElementById("year").value = new Date().getFullYear();
-  selLicense.value   = "";
-  urlHidden.value    = "";
+  updateLicenseFromValue("");
   customInput.value  = "";
-  customField.hidden = true;
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   activeSource = null;
   if (!skipSync) syncAll();
@@ -1257,15 +1295,34 @@ async function fetchMetadata(file) {
   }
 }
 
-// ── License change ────────────────────────────────
-selLicense.addEventListener("change", () => {
-  const val = selLicense.value;
+// ── License change (via buttons or select) ────────
+function updateLicenseFromValue(val) {
+  selLicense.value = val;
   customField.hidden = val !== "";
   if (!val) customInput.value = "";
   if (val) urlHidden.value = LICENSE_URLS[val] || _historicLicenseUrl(val);
+
+  // Update button states
+  document.querySelectorAll(".license-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.license === val);
+  });
+
   syncCcInfo();
   updatePreview();
+}
+
+selLicense.addEventListener("change", () => {
+  updateLicenseFromValue(selLicense.value);
 });
+
+// License grid buttons
+document.querySelectorAll(".license-btn").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    updateLicenseFromValue(btn.dataset.license);
+  });
+});
+
 customInput.addEventListener("input", updatePreview);
 
 // ── Source chips ──────────────────────────────────
