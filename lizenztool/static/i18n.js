@@ -49,6 +49,11 @@ async function initI18n() {
 
   // Setup language switcher
   setupLanguageSwitcher();
+
+  // Trigger UI initialization after i18n is fully loaded
+  if (window._initLizenztoolUI) {
+    window._initLizenztoolUI();
+  }
 }
 
 /**

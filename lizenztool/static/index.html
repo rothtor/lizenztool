@@ -1532,20 +1532,15 @@ const _initYear = new Date().getFullYear();
 document.getElementById("year").value = _initYear;
 urlHidden.value = "";
 
-// Wait for i18n to be fully initialized before using t()
+// Define UI initialization function (will be called by i18n.js after initI18n)
 window._initLizenztoolUI = function() {
+  if (window._initLizenztoolUI._done) return; // Prevent double-call
+  window._initLizenztoolUI._done = true;
+
   updateLicenseYearHints(String(_initYear));
   syncAll();
   drawPlaceholder();
 };
-
-// Call immediately if i18n already loaded, or wait for it
-if (typeof i18nData !== 'undefined' && Object.keys(i18nData).length > 0) {
-  window._initLizenztoolUI();
-} else {
-  // Fallback: try again after a small delay
-  setTimeout(window._initLizenztoolUI, 100);
-}
 
 // ── Setup reset button ────────────────────────────
 window.selectedFile = selectedFile;
