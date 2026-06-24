@@ -361,10 +361,16 @@ input::placeholder { color: #b8c0cc; }
 .sp-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--fg); }
 .sp-val { font-size: .7rem; color: var(--fg); min-width: 2.7rem; text-align: right; font-variant-numeric: tabular-nums; }
 .sp-color {
-  width: 30px; height: 26px; padding: 0; flex-shrink: 0;
-  border: 1px solid var(--border-d); border-radius: 6px;
-  background: none; cursor: pointer;
+  width: 22px; height: 22px; padding: 0; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 50%;
+  background: none; cursor: pointer; overflow: hidden;
+  box-shadow: none; -webkit-appearance: none; appearance: none;
+  transition: border-color .15s;
 }
+.sp-color:hover { border-color: var(--fg); }
+.sp-color::-webkit-color-swatch-wrapper { padding: 0; }
+.sp-color::-webkit-color-swatch { border: none; border-radius: 50%; }
+.sp-color::-moz-color-swatch { border: none; border-radius: 50%; }
 .sp-pos { display: flex; gap: .35rem; }
 .sp-pos button {
   flex: 1; border: 1px solid var(--border-d); background: none;
