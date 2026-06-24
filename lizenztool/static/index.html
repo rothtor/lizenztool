@@ -310,6 +310,78 @@ input::placeholder { color: #b8c0cc; }
 .style-chip:hover  { border-color: var(--fg); color: var(--fg); }
 .style-chip.active { background: var(--fg); color: #fff; border-color: var(--fg); }
 
+/* ── Style settings panel ────────────────────────── */
+.style-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .3rem; }
+.style-head .fl { margin-bottom: 0; }
+.style-gear {
+  background: none;
+  border: 1px solid var(--border-d);
+  border-radius: 7px;
+  width: 30px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; line-height: 1;
+  cursor: pointer; color: var(--muted);
+  font-family: inherit; flex-shrink: 0;
+  transition: all .15s;
+}
+.style-gear:hover  { border-color: var(--fg); color: var(--fg); }
+.style-gear.active { background: var(--fg); color: #fff; border-color: var(--fg); }
+
+.style-chip { position: relative; }
+.style-chip.custom { padding-right: .5rem; }
+.preset-del {
+  position: absolute; top: -7px; right: -7px;
+  width: 17px; height: 17px;
+  border-radius: 50%; border: 1px solid var(--border-d);
+  background: var(--card); color: var(--muted);
+  font-size: .58rem; line-height: 1; padding: 0;
+  cursor: pointer; display: none;
+}
+.style-chip.custom:hover .preset-del,
+.style-chip.custom.active .preset-del { display: block; }
+.preset-del:hover { color: var(--accent); border-color: var(--accent); }
+
+#style-panel {
+  margin-top: .6rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .85rem .9rem;
+  background: #fafbfd;
+}
+#style-panel[hidden] { display: none; }
+.sp-field { margin-bottom: .65rem; }
+.sp-field:last-child { margin-bottom: 0; }
+.sp-field > label {
+  display: block;
+  font-size: .65rem; font-weight: 700; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: .28rem;
+}
+.sp-row { display: flex; align-items: center; gap: .5rem; }
+.sp-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--fg); }
+.sp-val { font-size: .7rem; color: var(--fg); min-width: 2.7rem; text-align: right; font-variant-numeric: tabular-nums; }
+.sp-color {
+  width: 30px; height: 26px; padding: 0; flex-shrink: 0;
+  border: 1px solid var(--border-d); border-radius: 6px;
+  background: none; cursor: pointer;
+}
+.sp-pos { display: flex; gap: .35rem; }
+.sp-pos button {
+  flex: 1; border: 1px solid var(--border-d); background: none;
+  border-radius: 7px; padding: .3rem; font-size: .74rem;
+  cursor: pointer; color: var(--muted); font-family: inherit;
+  transition: all .15s;
+}
+.sp-pos button:hover  { border-color: var(--fg); color: var(--fg); }
+.sp-pos button.active { background: var(--fg); color: #fff; border-color: var(--fg); }
+.sp-actions { margin-top: .75rem; padding-top: .65rem; border-top: 1px solid var(--border); }
+.sp-save {
+  width: 100%; background: var(--accent); color: #fff; border: none;
+  border-radius: 7px; padding: .45rem; font-size: .76rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: background .15s;
+}
+.sp-save:hover { background: var(--accent-h); }
+
 /* ── Toggle ──────────────────────────────────────── */
 .toggle-row {
   display: flex;
@@ -767,11 +839,56 @@ footer a:hover {
 
       <!-- Stil -->
       <div class="field">
-        <label class="fl" data-i18n="ui.style">Stil</label>
-        <div class="style-chips">
+        <div class="style-head">
+          <label class="fl" data-i18n="ui.style">Stil</label>
+          <button type="button" class="style-gear" id="style-gear" data-i18n-title="ui.customize_style" aria-label="Anpassen">⚙</button>
+        </div>
+        <div class="style-chips" id="style-chips">
           <button type="button" class="style-chip active" data-preset="standard" data-i18n="ui.style_standard">Standard</button>
           <button type="button" class="style-chip" data-preset="minimal" data-i18n="ui.style_minimal">Minimal</button>
           <button type="button" class="style-chip" data-preset="bold" data-i18n="ui.style_bold">Kräftig</button>
+        </div>
+
+        <div id="style-panel" hidden>
+          <div class="sp-field">
+            <label data-i18n="ui.sp_text_size">Textgröße</label>
+            <div class="sp-row">
+              <input type="range" id="sp-size" min="2" max="15" step="0.5">
+              <span class="sp-val" id="sp-size-val"></span>
+            </div>
+          </div>
+          <div class="sp-field">
+            <label data-i18n="ui.sp_background">Hintergrund</label>
+            <div class="sp-row">
+              <input type="color" class="sp-color" id="sp-bgcolor">
+              <input type="range" id="sp-opacity" min="0" max="100" step="1">
+              <span class="sp-val" id="sp-opacity-val"></span>
+            </div>
+          </div>
+          <div class="sp-field">
+            <label data-i18n="ui.sp_text_color">Textfarbe</label>
+            <div class="sp-row">
+              <input type="color" class="sp-color" id="sp-textcolor">
+            </div>
+          </div>
+          <div class="sp-field">
+            <label data-i18n="ui.sp_stroke">Umrandung</label>
+            <div class="sp-row">
+              <input type="color" class="sp-color" id="sp-strokecolor">
+              <input type="range" id="sp-stroke" min="0" max="4" step="0.2">
+              <span class="sp-val" id="sp-stroke-val"></span>
+            </div>
+          </div>
+          <div class="sp-field">
+            <label data-i18n="ui.sp_position">Position</label>
+            <div class="sp-pos">
+              <button type="button" data-pos="top" data-i18n="ui.sp_pos_top">Oben</button>
+              <button type="button" data-pos="bottom" data-i18n="ui.sp_pos_bottom">Unten</button>
+            </div>
+          </div>
+          <div class="sp-actions">
+            <button type="button" class="sp-save" id="sp-save" data-i18n="ui.sp_save_preset">Als Preset speichern</button>
+          </div>
         </div>
       </div>
 
@@ -801,7 +918,7 @@ footer a:hover {
 </div>
 
 <footer>
-  <span class="version-badge" id="version">v1.1</span>
+  <span class="version-badge" id="version"></span>
 </footer>
 
 <script>
@@ -906,6 +1023,12 @@ let hasDvidsKey     = false;
 fetch("/api/integrations").then(r => r.json()).then(d => {
   hasFlickrKey = d.flickr || false;
   hasDvidsKey  = d.dvids  || false;
+}).catch(() => {});
+
+// Version badge — pulled from the package version (pyproject.toml) via the API,
+// so it never has to be hand-edited in the markup.
+fetch("/api/version").then(r => r.json()).then(d => {
+  if (d.version) document.getElementById("version").textContent = "v" + d.version;
 }).catch(() => {});
 
 // ── Drop zone ─────────────────────────────────────
@@ -1361,14 +1484,88 @@ document.querySelectorAll(".chip[data-src]").forEach(btn => {
   });
 });
 
-// ── Style preset chips ────────────────────────────
-document.querySelectorAll(".style-chip").forEach(btn => {
+// ── Style preset chips (delegated — custom chips are added dynamically) ──
+document.getElementById("style-chips").addEventListener("click", (e) => {
+  const del = e.target.closest(".preset-del");
+  if (del) {
+    e.stopPropagation();
+    deleteCustomPreset(del.parentElement.dataset.preset);
+    window.updateResetButtonState?.();
+    return;
+  }
+  const chip = e.target.closest(".style-chip");
+  if (!chip) return;
+  loadPreset(chip.dataset.preset);
+});
+
+// ── Style settings panel ──────────────────────────
+const stylePanel = document.getElementById("style-panel");
+const styleGear  = document.getElementById("style-gear");
+
+const _hx       = n => Math.max(0, Math.min(255, n | 0)).toString(16).padStart(2, "0");
+const rgbToHex  = ([r, g, b]) => `#${_hx(r)}${_hx(g)}${_hx(b)}`;
+const hexToRgb  = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const _setVal   = (id, v) => { document.getElementById(id).value = v; };
+const _setTxt   = (id, v) => { document.getElementById(id).textContent = v; };
+
+styleGear.addEventListener("click", () => {
+  const open = stylePanel.hidden;
+  stylePanel.hidden = !open;
+  styleGear.classList.toggle("active", open);
+});
+
+// Reflect currentStyle into the panel controls (on preset load / reset).
+function syncPanelFromStyle() {
+  const s = currentStyle;
+  const sizePct = +(s.barRatio * 100).toFixed(1);
+  _setVal("sp-size", sizePct);              _setTxt("sp-size-val", sizePct + "%");
+  const opPct = Math.round(s.opacity * 100);
+  _setVal("sp-opacity", opPct);             _setTxt("sp-opacity-val", opPct + "%");
+  document.getElementById("sp-bgcolor").value     = rgbToHex(s.barColor);
+  document.getElementById("sp-textcolor").value   = rgbToHex(s.textColor);
+  document.getElementById("sp-strokecolor").value = rgbToHex(s.stroke.color);
+  _setVal("sp-stroke", s.stroke.width);     _setTxt("sp-stroke-val", (+s.stroke.width).toFixed(1));
+  document.querySelectorAll(".sp-pos button").forEach(b =>
+    b.classList.toggle("active", b.dataset.pos === (s.position || "bottom")));
+}
+
+// Panel controls → currentStyle → live preview. Editing size drives barRatio
+// (resolution-independent); fontSize stays 0 so text scales with the bar.
+function onStyleEdit() {
+  const s = currentStyle;
+  const size = +document.getElementById("sp-size").value;
+  s.barRatio = size / 100;  s.fontSize = 0;  _setTxt("sp-size-val", size + "%");
+  const op = +document.getElementById("sp-opacity").value;
+  s.opacity = op / 100;     _setTxt("sp-opacity-val", op + "%");
+  s.barColor     = hexToRgb(document.getElementById("sp-bgcolor").value);
+  s.textColor    = hexToRgb(document.getElementById("sp-textcolor").value);
+  s.stroke.color = hexToRgb(document.getElementById("sp-strokecolor").value);
+  const sw = +document.getElementById("sp-stroke").value;
+  s.stroke.width = sw;      _setTxt("sp-stroke-val", sw.toFixed(1));
+  drawCanvas();
+}
+["sp-size", "sp-bgcolor", "sp-opacity", "sp-textcolor", "sp-strokecolor", "sp-stroke"]
+  .forEach(id => document.getElementById(id).addEventListener("input", onStyleEdit));
+
+document.querySelectorAll(".sp-pos button").forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".style-chip").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    activePreset = btn.dataset.preset;
-    updatePreview();
+    currentStyle.position = btn.dataset.pos;
+    document.querySelectorAll(".sp-pos button").forEach(b => b.classList.toggle("active", b === btn));
+    drawCanvas();
   });
+});
+
+document.getElementById("sp-save").addEventListener("click", () => {
+  const name = (prompt(t("ui.sp_preset_name", "Preset name:")) || "").trim();
+  if (!name) return;
+  if (BUILTIN_PRESETS.includes(name.toLowerCase())) { alert(t("ui.sp_name_reserved", "This name is reserved.")); return; }
+  const custom = loadCustomPresets();
+  custom[name] = _clone(currentStyle);
+  saveCustomPresets(custom);
+  PRESET_STYLE[name] = _clone(currentStyle);
+  activePreset = name;
+  renderCustomChips();
+  window.updateResetButtonState?.();
 });
 
 // ── Historic CC license helper ────────────────────
@@ -1416,10 +1613,31 @@ function syncCcInfo() {
 // ── Canvas preview ────────────────────────────────
 const previewCanvas = document.getElementById("preview-canvas");
 const PRESET_STYLE  = {
-  standard: { barRatio: 0.06, opacity: 200/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, stroke: { width: 0, color: [0,0,0] } },
-  minimal:  { barRatio: 0.04, opacity: 150/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, stroke: { width: 1.2, color: [0,0,0] } },
-  bold:     { barRatio: 0.09, opacity: 245/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, stroke: { width: 0, color: [0,0,0] } },
+  standard: { barRatio: 0.06, opacity: 200/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, stroke: { width: 0, color: [0,0,0] }, position: "bottom" },
+  minimal:  { barRatio: 0.04, opacity: 150/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, stroke: { width: 1.2, color: [0,0,0] }, position: "bottom" },
+  bold:     { barRatio: 0.09, opacity: 245/255, fontSize: 0, barColor: [0,0,0], textColor: [255,255,255], paddingRatio: 0.015, stroke: { width: 0, color: [0,0,0] }, position: "bottom" },
 };
+const BUILTIN_PRESETS   = ["standard", "minimal", "bold"];
+const CUSTOM_PRESETS_KEY = "lizenztool.customPresets";
+
+// `currentStyle` is the live, editable style the canvas renders. Selecting a
+// preset clones its values into here; the settings panel mutates this clone so
+// built-in presets stay pristine. structuredClone gives us a deep copy (nested
+// barColor/stroke arrays must not be shared between presets and the working set).
+const _clone = o => structuredClone(o);
+let currentStyle = _clone(PRESET_STYLE.standard);
+
+// User-defined presets persist in localStorage (per-browser, survives reloads).
+function loadCustomPresets() {
+  try {
+    const obj = JSON.parse(localStorage.getItem(CUSTOM_PRESETS_KEY) || "{}");
+    return (obj && typeof obj === "object" && !Array.isArray(obj)) ? obj : {};
+  } catch (_) { return {}; }
+}
+function saveCustomPresets(obj) {
+  try { localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(obj)); } catch (_) {}
+}
+
 fetch("/api/presets").then(r => r.json()).then(data => {
   for (const [name, p] of Object.entries(data)) {
     const ts = p.text_stroke || {};
@@ -1430,15 +1648,60 @@ fetch("/api/presets").then(r => r.json()).then(data => {
       barColor:     p.bar_color  || [0, 0, 0],
       textColor:    p.text_color || [255, 255, 255],
       paddingRatio: p.padding_ratio || 0.015,
-      stroke: {
-        width: ts.width || 0,
-        color: ts.color || [0, 0, 0],
-      },
+      stroke: { width: ts.width || 0, color: ts.color || [0, 0, 0] },
+      position:     p.position || "bottom",
     };
   }
-  drawCanvas();
-}).catch(() => {});
+  Object.assign(PRESET_STYLE, loadCustomPresets());
+  renderCustomChips();
+  loadPreset(activePreset);
+}).catch(() => { renderCustomChips(); loadPreset(activePreset); });
 let canvasImg = null;
+
+// Load a preset's values into the live style + sync the panel/chips.
+function loadPreset(name) {
+  activePreset = PRESET_STYLE[name] ? name : "standard";
+  currentStyle = _clone(PRESET_STYLE[activePreset]);
+  highlightActiveChip();
+  syncPanelFromStyle();
+  drawCanvas();
+}
+
+function highlightActiveChip() {
+  document.querySelectorAll("#style-chips .style-chip").forEach(c =>
+    c.classList.toggle("active", c.dataset.preset === activePreset));
+}
+
+// (Re)build chips for user-defined presets after the built-in three.
+function renderCustomChips() {
+  const wrap = document.getElementById("style-chips");
+  wrap.querySelectorAll(".style-chip.custom").forEach(c => c.remove());
+  for (const name of Object.keys(loadCustomPresets())) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "style-chip custom";
+    btn.dataset.preset = name;
+    btn.textContent = name;
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "preset-del";
+    del.textContent = "✕";
+    del.title = t("ui.sp_delete_preset", "Delete preset");
+    btn.appendChild(del);
+    wrap.appendChild(btn);
+  }
+  highlightActiveChip();
+}
+
+function deleteCustomPreset(name) {
+  const custom = loadCustomPresets();
+  if (!(name in custom)) return;
+  delete custom[name];
+  saveCustomPresets(custom);
+  delete PRESET_STYLE[name];
+  if (activePreset === name) loadPreset("standard");
+  renderCustomChips();
+}
 
 function loadCanvasImage(objectUrl) {
   const img = new Image();
@@ -1465,7 +1728,7 @@ function drawPlaceholder() {
 function drawCanvas() {
   if (!canvasImg) { drawPlaceholder(); return; }
   const text = overlayText();
-  const style = PRESET_STYLE[activePreset] || PRESET_STYLE.standard;
+  const style = currentStyle || PRESET_STYLE.standard;
 
   const W = canvasImg.naturalWidth;
   const H = canvasImg.naturalHeight;
@@ -1479,7 +1742,7 @@ function drawCanvas() {
     const barH     = Math.max(20, Math.round(H * style.barRatio));
     const pad      = Math.max(4,  Math.round(H * (style.paddingRatio || 0.015)));
     const fontSize = style.fontSize > 0 ? style.fontSize : Math.max(10, barH - 2 * pad);
-    const y        = H - barH;
+    const y        = style.position === "top" ? 0 : H - barH;
     const [br, bg, bb] = style.barColor  || [0, 0, 0];
     const [tr, tg, tb] = style.textColor || [255, 255, 255];
     const stroke   = style.stroke || {};
@@ -1653,12 +1916,12 @@ window.fullReset = function fullReset() {
   updateLicenseFromValue("");
   selLicense.selectedIndex = 0;
 
-  // Sources & style presets
+  // Sources & style presets (custom presets are kept; only the selection resets)
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".style-chip").forEach(b => b.classList.remove("active"));
-  document.querySelector('.style-chip[data-preset="standard"]')?.classList.add("active");
   activeSource = null;
-  activePreset = "standard";
+  loadPreset("standard");
+  stylePanel.hidden = true;
+  styleGear.classList.remove("active");
 
   // Loaded image / canvas
   if (previewObjUrl) { URL.revokeObjectURL(previewObjUrl); previewObjUrl = null; }

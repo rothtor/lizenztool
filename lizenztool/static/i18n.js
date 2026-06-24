@@ -106,6 +106,11 @@ function applyTranslations() {
     el.placeholder = t(key);
   });
 
+  // Handle title (tooltip) translations
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    el.title = t(el.getAttribute('data-i18n-title'));
+  });
+
   // Update language switcher button text
   updateLanguageSwitcherLabel();
 }
