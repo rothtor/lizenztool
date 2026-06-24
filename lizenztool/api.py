@@ -118,6 +118,34 @@ def cfg() -> AppConfig:
     return _cfg_cache
 
 
+_version_cache: str | None = None
+
+def _app_version() -> str:
+    """Resolve the app version from a single source of truth. Prefer the
+    pyproject.toml that sits next to the source tree (dev runs, where installed
+    metadata can be stale); fall back to installed package metadata (prod, where
+    pyproject.toml isn't beside the installed package). Cached after first lookup."""
+    global _version_cache
+    if _version_cache is not None:
+        return _version_cache
+    version = ""
+    try:
+        import tomllib
+        pyproject = Path(__file__).parent.parent / "pyproject.toml"
+        if pyproject.exists():
+            version = tomllib.loads(pyproject.read_text())["project"]["version"]
+    except Exception:
+        pass
+    if not version:
+        try:
+            from importlib.metadata import version as pkg_version
+            version = pkg_version("lizenztool")
+        except Exception:
+            version = "0.0.0"
+    _version_cache = version
+    return version
+
+
 _ALLOWED_SCHEMES = {"http", "https"}
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/tiff", "image/webp"}
 
@@ -155,6 +183,7 @@ async def presets_info() -> dict:
             },
             "font_size":     s.font_size,
             "padding_ratio": s.padding_ratio,
+            "position":      s.position,
         }
         for name, s in cfg().presets.items()
     }
@@ -166,6 +195,11 @@ async def integrations_info() -> dict:
         "flickr": bool(cfg().integrations.flickr_api_key),
         "dvids":  bool(cfg().integrations.dvids_api_key),
     }
+
+
+@app.get("/api/version")
+async def version_info() -> dict:
+    return {"version": _app_version()}
 
 
 class FlickrMetaRequest(BaseModel):
