@@ -2,10 +2,11 @@
 # Caddy obtains a Let's Encrypt certificate automatically on first start.
 
 :8080 {
-    reverse_proxy app:8000 {
-        # Replace client-controlled header so rate limiting cannot be spoofed
-        header_up X-Forwarded-For {remote_host}
-    }
+    # X-Forwarded-For is passed through: the upstream proxy (e.g. Nginx Proxy
+    # Manager) MUST overwrite it with the real client IP (proxy_set_header
+    # X-Forwarded-For $remote_addr;), otherwise clients can spoof it and
+    # bypass rate limiting.
+    reverse_proxy app:8000
 
     # Limit upload body size at the proxy level (must match MAX_UPLOAD_MB + headroom)
     request_body {
