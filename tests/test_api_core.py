@@ -6,32 +6,33 @@ from unittest.mock import Mock
 
 
 class TestClientIp:
-    """Test _client_ip extraction from headers and socket."""
+    """_client_ip must use the connection peer, never a client-supplied header.
 
-    def test_client_ip_from_x_forwarded_for_single(self):
-        """Extract single IP from X-Forwarded-For."""
-        request = Mock(spec=Request)
-        request.headers.get.return_value = "192.0.2.1"
-        assert _client_ip(request) == "192.0.2.1"
+    Trusting X-Forwarded-For directly would let any caller reset their own
+    rate-limit bucket per request. uvicorn's --proxy-headers rewrites
+    request.client.host from the header, but only for trusted proxy peers.
+    """
 
-    def test_client_ip_from_x_forwarded_for_multiple(self):
-        """Extract first IP from comma-separated X-Forwarded-For."""
-        request = Mock(spec=Request)
-        request.headers.get.return_value = "192.0.2.1, 10.0.0.1, 172.16.0.1"
-        assert _client_ip(request) == "192.0.2.1"
-
-    def test_client_ip_from_x_forwarded_for_with_spaces(self):
-        """Strip whitespace from extracted IP."""
-        request = Mock(spec=Request)
-        request.headers.get.return_value = " 192.0.2.1 , 10.0.0.1"
-        assert _client_ip(request) == "192.0.2.1"
-
-    def test_client_ip_fallback_to_socket(self):
-        """Fall back to request.client.host when X-Forwarded-For missing."""
+    def test_client_ip_uses_request_client_host(self):
+        """The connection peer is the source of truth."""
         request = Mock(spec=Request)
         request.headers.get.return_value = None
         request.client.host = "203.0.113.5"
         assert _client_ip(request) == "203.0.113.5"
+
+    def test_client_ip_ignores_x_forwarded_for(self):
+        """A spoofed X-Forwarded-For must not change the rate-limit key."""
+        request = Mock(spec=Request)
+        request.headers.get.return_value = "1.2.3.4, 5.6.7.8"
+        request.client.host = "203.0.113.5"
+        assert _client_ip(request) == "203.0.113.5"
+
+    def test_client_ip_does_not_read_headers_at_all(self):
+        """Belt and braces: the header is not even consulted."""
+        request = Mock(spec=Request)
+        request.client.host = "203.0.113.5"
+        _client_ip(request)
+        request.headers.get.assert_not_called()
 
     def test_client_ip_fallback_no_client(self):
         """Return 'unknown' when no client info available."""
@@ -39,6 +40,11 @@ class TestClientIp:
         request.headers.get.return_value = None
         request.client = None
         assert _client_ip(request) == "unknown"
+
+    def test_client_ip_is_the_rate_limit_key(self):
+        """The limiter keys on this function, so the two cannot drift apart."""
+        from lizenztool.api import limiter
+        assert limiter._key_func is _client_ip
 
 
 class TestDetectExt:

@@ -43,6 +43,36 @@ A license is legal information, so the tool never reinterprets one:
 
 ---
 
+## Security
+
+- **SSRF protection** validates every A/AAAA record `socket.getaddrinfo()`
+  returns for a host (IPv4 and IPv6), not just the first one, and blocks the
+  whole host if any record is non-global. DNS failures and empty answers block
+  too. The same check runs again on every redirect target, and redirects are
+  restricted to `http`/`https`.
+- The outbound HTTP client resolves each host once and connects to exactly the
+  addresses that were validated (`_safe_create_connection`), closing the gap
+  between the check and the connect for that request. This does **not** fully
+  solve DNS rebinding: an attacker controlling DNS can still return a
+  different, individually-valid answer on a later, separate request within the
+  process's DNS cache TTL. See the docstring on `_resolve_global_addrinfo` in
+  `lizenztool/api.py` for the exact boundary of what is and isn't covered.
+- **Client IP / rate limiting**: the app never reads `X-Forwarded-For` itself —
+  it uses `request.client.host`, which uvicorn rewrites from that header only
+  for peers listed in `--forwarded-allow-ips`. Reading the header directly
+  would let any client reset its own rate-limit bucket by sending a fake value.
+- **Proxy trust** defaults to loopback only (`FORWARDED_ALLOW_IPS=127.0.0.1` in
+  the Dockerfile, uvicorn's own default). The bundled `docker-compose.yml`
+  puts Caddy and the app on a fixed-subnet network and sets
+  `FORWARDED_ALLOW_IPS` to that subnet, since Caddy reaches the app over the
+  Docker network rather than loopback. On Railway or another PaaS, the
+  platform's edge proxy must be configured to pass a trustworthy
+  `X-Forwarded-For` in the first place — this setting only decides whether
+  uvicorn believes it once it arrives, so verify your platform's setup before
+  relying on `request.client.host` for anything security-sensitive.
+
+---
+
 ## Requirements
 
 - Python 3.11 or newer
