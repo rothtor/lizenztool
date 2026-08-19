@@ -764,7 +764,7 @@ footer a:hover {
       </svg>
       <span class="dz-hint" data-i18n="ui.drag_or_browse">Drag &amp; Drop oder <label for="file-input" style="cursor:pointer;text-decoration:underline;color:var(--accent)">durchsuchen</label></span>
       <button type="button" id="browse-btn" style="display:none" data-i18n="ui.browse"></button>
-      <input type="file" id="file-input" accept="image/jpeg,image/png,image/tiff,image/webp" hidden>
+      <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden>
     </div>
 
     <div class="or-divider" style="margin:.65rem 0 .55rem" data-i18n="ui.or_url">oder URL</div>
@@ -905,9 +905,9 @@ footer a:hover {
         <label class="exif-toggle">
           <input type="checkbox" id="keep-exif">
           <span class="exif-toggle-track"><span class="exif-toggle-thumb"></span></span>
-          <span data-i18n="ui.keep_exif">Original-Metadaten behalten</span>
+          <span data-i18n="ui.keep_exif">EXIF/XMP soweit möglich behalten</span>
         </label>
-        <p class="hint" id="exif-hint" style="margin:.45rem 0 .6rem" data-i18n="ui.exif_stripped_hint">EXIF-/Metadaten werden beim Export entfernt.</p>
+        <p class="hint" id="exif-hint" style="margin:.45rem 0 .6rem" data-i18n="ui.exif_stripped_hint">EXIF-/XMP-Metadaten werden beim Export entfernt.</p>
         <button type="submit" id="submit-btn" disabled data-i18n="ui.apply_download">Anwenden &amp; Herunterladen</button>
       </div>
       <div id="status"></div>
@@ -1088,7 +1088,7 @@ fetch("/api/version").then(r => r.json()).then(d => {
 // ── Drop zone ─────────────────────────────────────
 dropzone.addEventListener("dragover",  e => { e.preventDefault(); dropzone.classList.add("dragover"); });
 dropzone.addEventListener("dragleave", ()=> dropzone.classList.remove("dragover"));
-dropzone.addEventListener("drop",      e => { e.preventDefault(); dropzone.classList.remove("dragover"); const f = e.dataTransfer.files[0]; if (f) setFile(f); });
+dropzone.addEventListener("drop",      e => { e.preventDefault(); dropzone.classList.remove("dragover"); const f = e.dataTransfer.files[0]; if (f) setFile(f); });  // setFile refuses TIFF
 dropzone.addEventListener("click",     ()=> fileInput.click());
 browseBtn.addEventListener("click",    e => { e.stopPropagation(); fileInput.click(); });
 fileInput.addEventListener("change",   ()=> { if (fileInput.files[0]) setFile(fileInput.files[0]); });
@@ -1104,7 +1104,34 @@ function resetForm(skipSync = false) {
   if (!skipSync) syncAll();
 }
 
-function setFile(file, name, keepUrl = false) {
+// ── TIFF guard ────────────────────────────────────
+// Canvas has no TIFF encoder, so a TIFF export would silently become a JPEG.
+// Rather than re-encode the file behind the user's back, TIFF is refused in the
+// browser and pointed at the CLI, which writes real TIFF via Pillow.
+const _TIFF_MIME = new Set(["image/tiff", "image/tif", "image/x-tiff"]);
+
+async function isTiff(file, displayName) {
+  const name = String(displayName || file.name || "").toLowerCase();
+  if (/\.tiff?$/.test(name)) return true;
+  if (_TIFF_MIME.has((file.type || "").toLowerCase())) return true;
+  // Catch files whose name and MIME type say nothing (e.g. dragged-in blobs).
+  try {
+    const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    if (head.length === 4) {
+      const le = head[0] === 0x49 && head[1] === 0x49 && head[2] === 0x2a && head[3] === 0x00;
+      const be = head[0] === 0x4d && head[1] === 0x4d && head[2] === 0x00 && head[3] === 0x2a;
+      if (le || be) return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+async function setFile(file, name, keepUrl = false) {
+  if (await isTiff(file, name)) {
+    setStatus("error", t("ui.tiff_unsupported"));
+    fileInput.value = "";
+    return false;
+  }
   if (!keepUrl) imageUrlInput.value = "";
   if (keepUrl)  fileInput.value = "";
   if (previewObjUrl) { URL.revokeObjectURL(previewObjUrl); previewObjUrl = null; }
@@ -1140,6 +1167,7 @@ function setFile(file, name, keepUrl = false) {
   fetchMetadata(file);
   window.selectedFile = selectedFile;
   window.updateResetButtonState?.();
+  return true;
 }
 
 // ── Wikimedia Commons metadata ────────────────────
@@ -1327,7 +1355,8 @@ fetchBtn.addEventListener("click", async () => {
     }
     const blob = await res.blob();
     const filename = (wmFilename || fetchUrl.split("/").pop().split("?")[0]) || "image.jpg";
-    setFile(new File([blob], filename, { type: blob.type }), filename, true);
+    const accepted = await setFile(new File([blob], filename, { type: blob.type }), filename, true);
+    if (!accepted) return;  // setFile already reported why (e.g. TIFF)
 
     // A rights warning must be the last word: never overwrite it with a
     // generic green success message.
@@ -2207,6 +2236,13 @@ form.addEventListener("submit", e => {
 
   const ext      = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
   const mimeMap  = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+  // Belt and braces: setFile already refuses TIFF, but never let one slip
+  // through here and get silently re-encoded as JPEG.
+  if (ext === "tif" || ext === "tiff") {
+    setStatus("error", t("ui.tiff_unsupported"));
+    submitBtn.disabled = false;
+    return;
+  }
   const mimeType = mimeMap[ext] || "image/jpeg";
   const quality  = mimeType !== "image/png" ? 0.95 : undefined;
   const outExt   = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";

@@ -27,6 +27,31 @@ def _best_font(size: int, font_path: str = "") -> ImageFont.FreeTypeFont | Image
     return ImageFont.load_default()
 
 
+# Reference font size that text_stroke_width is expressed in — the browser
+# renderer uses the same constant, so both scale the outline identically.
+_STROKE_REFERENCE_FONT_SIZE = 32
+
+
+def _stroke_kwargs(style: StyleConfig, font_size: int) -> dict:
+    """Translate the configured stroke width into Pillow's stroke arguments.
+
+    The browser strokes via canvas `lineWidth`, which is centred on the glyph
+    outline, so only half of it shows outside the glyph. Pillow's `stroke_width`
+    is that outward extent directly — hence the /2. Both renderers scale the
+    configured width with the font size so the outline does not collapse to a
+    hairline on large images.
+    """
+    width = style.text_stroke.width
+    if width <= 0:
+        return {}
+    scaled = width * (font_size / _STROKE_REFERENCE_FONT_SIZE) / 2
+    # A requested stroke must stay visible even after rounding down.
+    return {
+        "stroke_width": max(1, round(scaled)),
+        "stroke_fill": (*style.text_stroke.color, 255),
+    }
+
+
 def render_overlay(
     image_path: Path,
     info: LicenseInfo,
@@ -55,7 +80,8 @@ def render_overlay(
 
     bar = Image.new("RGBA", (w, bar_h), bar_rgba)
     draw = ImageDraw.Draw(bar)
-    draw.text((padding, padding), text, font=font, fill=text_rgba)
+    stroke_kwargs = _stroke_kwargs(style, font_size)
+    draw.text((padding, padding), text, font=font, fill=text_rgba, **stroke_kwargs)
 
     composite = img.copy()
     y = h - bar_h if style.position == "bottom" else 0

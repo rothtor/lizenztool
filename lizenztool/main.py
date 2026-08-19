@@ -33,18 +33,23 @@ def process(
         info = read_metadata(valid[0])
         shared_info = confirm_or_edit(info) if not info.is_empty() else prompt_manual()
 
+    # Paths already handed out in this run, so two images can never be routed to
+    # the same file even before the first one has been written to disk.
+    reserved: set[Path] = set()
+
     for idx, image_path in enumerate(valid, start=1):
         console.rule(f"[bold]{image_path.name}[/bold]")
         info = shared_info if batch else _resolve_info(image_path)
 
-        out_path = _output_path(image_path, output_dir, idx, len(valid), cfg)
+        if output_dir and not dry_run:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        out_path = _output_path(image_path, output_dir, idx, len(valid), cfg, reserved)
+        reserved.add(out_path)
         console.print(f"  Overlay text: [green]{info.overlay_text()}[/green]")
         console.print(f"  Output:       [cyan]{out_path}[/cyan]")
         console.print(f"  Strip EXIF:   [cyan]{cfg.output.strip_exif}[/cyan]")
 
         if not dry_run:
-            if output_dir:
-                output_dir.mkdir(parents=True, exist_ok=True)
             render_overlay(image_path, info, out_path, style=cfg.style)
             if cfg.output.strip_exif:
                 try:
@@ -73,11 +78,37 @@ def _resolve_info(image_path: Path):
     return confirm_or_edit(info) if not info.is_empty() else prompt_manual()
 
 
-def _output_path(image_path: Path, output_dir: Path | None, idx: int, total: int, cfg: AppConfig) -> Path:
+def _unique_path(path: Path, reserved: set[Path]) -> Path:
+    """Return a path that neither exists on disk nor is already reserved.
+
+    Collision protection must not depend on the default pattern containing {n}:
+    a user-configured constant pattern (filename_pattern = "fixed") would
+    otherwise make every image of a batch overwrite the previous one. On a
+    collision a numeric suffix is appended: fixed.jpg, fixed-2.jpg, fixed-3.jpg.
+    """
+    if path not in reserved and not path.exists():
+        return path
+    stem, suffix, parent = path.stem, path.suffix, path.parent
+    n = 2
+    while True:
+        candidate = parent / f"{stem}-{n}{suffix}"
+        if candidate not in reserved and not candidate.exists():
+            return candidate
+        n += 1
+
+
+def _output_path(
+    image_path: Path,
+    output_dir: Path | None,
+    idx: int,
+    total: int,
+    cfg: AppConfig,
+    reserved: set[Path] | None = None,
+) -> Path:
     width = len(str(total))
     counter = f"{idx:0{width}}"
     name = expand_filename(cfg.output.filename_pattern, counter) + image_path.suffix.lower()
     base = output_dir if output_dir else image_path.parent
-    return base / name
+    return _unique_path(base / name, reserved if reserved is not None else set())
 
 

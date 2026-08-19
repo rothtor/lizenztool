@@ -38,9 +38,9 @@
     "minimal": "Minimal",
     "standard": "Standard",
     "exif_always_stripped": "EXIF-Metadaten werden beim Export immer entfernt.",
-    "keep_exif": "Original-Metadaten behalten",
-    "exif_stripped_hint": "EXIF-/Metadaten werden beim Export entfernt.",
-    "exif_kept_hint": "Original-Metadaten bleiben erhalten (ggf. inkl. GPS/Kamera).",
+    "keep_exif": "EXIF/XMP soweit möglich behalten",
+    "exif_stripped_hint": "EXIF-/XMP-Metadaten werden beim Export entfernt.",
+    "exif_kept_hint": "Übernommen wird, was der Browser kopieren kann — die EXIF- und XMP-Blöcke von JPEG- und PNG-Dateien (ggf. inkl. GPS/Kamera). Andere Blöcke und andere Formate bleiben nicht erhalten; für eine vollständige Übernahme die CLI nutzen.",
     "exif_unsupported": "(Metadaten für dieses Format nicht übertragbar)",
     "apply_download": "Anwenden & Herunterladen",
     "copy": "Kopieren",
@@ -78,7 +78,8 @@
     "fetch_error": "Fehler: Bild konnte nicht geladen werden.",
     "license_from_source": "Lizenz laut Quelle",
     "license_check_required": "Die Lizenz konnte nicht sicher ermittelt werden – bitte den Rechtehinweis der Quelle prüfen.",
-    "dvids_rights_check": "Bitte den Rechtehinweis des konkreten DVIDS-Assets prüfen – DVIDS liefert keine Lizenz pro Asset."
+    "dvids_rights_check": "Bitte den Rechtehinweis des konkreten DVIDS-Assets prüfen – DVIDS liefert keine Lizenz pro Asset.",
+    "tiff_unsupported": "TIFF wird im Browser nicht unterstützt — das Canvas hat keinen TIFF-Encoder und die Datei würde als JPEG enden. Für TIFF bitte die CLI verwenden (lizenztool bild.tif)."
   },
   "licenses": {
     "cc_by": "CC BY 4.0",

@@ -2,7 +2,8 @@
 
 Lizenztool adds a license overlay to images and optionally writes license metadata (EXIF/IPTC/XMP). It is available as both a **command-line tool** and a **web application**.
 
-Supported formats: JPEG · PNG · TIFF · WebP
+Supported formats: JPEG · PNG · WebP · TIFF (CLI only — the browser canvas has
+no TIFF encoder, so the web UI refuses TIFF instead of silently exporting JPEG)
 
 ---
 
@@ -151,8 +152,16 @@ font_size   = 0          # 0 = proportional to bar height
 [output]
 strip_exif         = true   # remove EXIF from output
 write_license_meta = false  # write license back as XMP/IPTC
-filename_pattern   = "img_{date}-{time}"  # {date}, {time}, {n}
+filename_pattern   = "img_{date}-{time}-{n}"  # {date}=YYYYMMDD, {time}=HHMM, {n}=counter
+```
 
+`{n}` is a sequential counter within the run (1, 2, 3, …), zero-padded to the
+width of the batch size. Regardless of the pattern, an existing file is never
+overwritten — a numeric suffix is appended on collision, so a constant pattern
+such as `filename_pattern = "fixed"` produces `fixed.jpg`, `fixed-2.jpg`,
+`fixed-3.jpg` rather than one repeatedly overwritten file.
+
+```toml
 [integrations]
 # flickr_api_key = "..."
 # dvids_api_key  = "..."
