@@ -70,16 +70,15 @@
     "cc_not_existed": "CC-Lizenzen gab es erst ab Dez. 2002.",
     "dec_2002": "Dez. 2002",
     "loading_image": "Bild wird geladen…",
-    "loading_failed": "Laden fehlgeschlagen",
-    "wikimedia_loaded": "Bild + Wikimedia-Metadaten geladen.",
-    "flickr_loaded": "Bild + Flickr-Metadaten geladen.",
-    "dvids_loaded": "Bild + DVIDS-Metadaten geladen.",
     "error_prefix": "Fehler: ",
     "image_still_loading": "Bild wird noch geladen, bitte einen Moment warten.",
     "processing_image": "Bild wird verarbeitet…",
     "canvas_export_failed": "Fehler: Canvas-Export fehlgeschlagen.",
     "download_success": "Fertig! Das Bild wird heruntergeladen.",
-    "fetch_error": "Fehler: Bild konnte nicht geladen werden."
+    "fetch_error": "Fehler: Bild konnte nicht geladen werden.",
+    "license_from_source": "Lizenz laut Quelle",
+    "license_check_required": "Die Lizenz konnte nicht sicher ermittelt werden – bitte den Rechtehinweis der Quelle prüfen.",
+    "dvids_rights_check": "Bitte den Rechtehinweis des konkreten DVIDS-Assets prüfen – DVIDS liefert keine Lizenz pro Asset."
   },
   "licenses": {
     "cc_by": "CC BY 4.0",
@@ -88,13 +87,15 @@
     "cc_by_nc_sa": "CC BY-NC-SA 4.0",
     "cc_by_nd": "CC BY-ND 4.0",
     "cc_by_nc_nd": "CC BY-NC-ND 4.0",
-    "cc0": "CC0 1.0 – Gemeinfrei",
-    "all_rights": "Alle Rechte vorbehalten"
+    "cc0": "CC0 1.0",
+    "all_rights": "Alle Rechte vorbehalten",
+    "public_domain": "Gemeinfrei (Public Domain)"
   },
   "cc": {
     "version_title": "ℹ Creative Commons 4.0",
-    "version_description": "Diese App nutzt CC 4.0 Lizenzen. Ältere Inhalte können unter CC 2.0 oder 3.0 stehen.",
-    "version_note": "Prüfe das Veröffentlichungsdatum des ursprünglichen Werks."
+    "version_description": "Lizenzen werden exakt so übernommen, wie die Quelle sie angibt. Ältere Werke können unter CC 1.0, 2.0, 2.5 oder 3.0 stehen – diese Versionen bleiben erhalten und werden nicht aktualisiert.",
+    "version_note": "Prüfe das Veröffentlichungsdatum des ursprünglichen Werks.",
+    "derived_summary_note": "Kurzbeschreibung auf Basis der 4.0-Fassung dieser Lizenzvariante. Maßgeblich ist der verlinkte Lizenztext dieser exakten Version."
   },
   "cc_info": {
     "cc_by": {
@@ -122,12 +123,16 @@
       "requirement": "Namensnennung + nicht-kommerziell + keine Bearbeitungen"
     },
     "cc0": {
-      "allowed": "Alles – keine Einschränkungen",
-      "requirement": "Keine Bedingungen (Gemeinfrei)"
+      "allowed": "Weitgehende freie Nutzung",
+      "requirement": "CC0-Verzichtserklärung / Ersatzlizenz"
     },
     "all_rights": {
       "allowed": "Keine freie Nutzung",
       "requirement": "Alle Rechte beim Urheber"
+    },
+    "public_domain": {
+      "allowed": "Nutzung nach anwendbarem Recht",
+      "requirement": "Gemeinfreiheit und mögliche Zusatzrechte prüfen"
     }
   },
   "sources": {

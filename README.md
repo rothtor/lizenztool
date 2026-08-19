@@ -19,6 +19,29 @@ Supported formats: JPEG · PNG · TIFF · WebP
 
 ---
 
+## License integrity
+
+A license is legal information, so the tool never reinterprets one:
+
+- **Versions are preserved.** `CC BY 2.0` stays `CC BY 2.0`, `CC BY-SA 3.0` stays
+  `CC BY-SA 3.0`. Nothing is silently upgraded to 4.0. Licenses that are not in
+  the dropdown are inserted into it verbatim, with their own URL.
+- **`CC0 1.0` and `Public Domain` are separate states.** CC0 is an explicit
+  rights waiver with its own deed URL; public domain is a legal status and gets
+  no CC URL. Neither is ever mapped onto the other.
+- **Flickr** license IDs are resolved through `flickr.photos.licenses.getInfo`,
+  so the license and version come from Flickr itself, not a hardcoded table.
+- **Wikimedia Commons** licenses are taken from the `LicenseShortName` and
+  `LicenseUrl` fields exactly as returned.
+- **DVIDS** exposes no per-asset rights status, so no license is assigned. The
+  API returns `rights_check_required: true` and the UI asks you to check the
+  rights notice of that specific asset.
+- **Own photos** get no preselected license — the author decides.
+- If a source gives no unambiguous license, the tool sets **no license** rather
+  than guessing one (including never defaulting to `All Rights Reserved`).
+
+---
+
 ## Requirements
 
 - Python 3.11 or newer

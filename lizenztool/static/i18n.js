@@ -247,8 +247,11 @@ function getCC_DATA() {
     "CC BY-NC-SA 4.0":{ erlaubt: cc.cc_by_nc_sa?.allowed || "Share & modify", bedingung: cc.cc_by_nc_sa?.requirement || "Attribution + non-commercial + share-alike", url: "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.de" },
     "CC BY-ND 4.0":   { erlaubt: cc.cc_by_nd?.allowed || "Share, commercial allowed", bedingung: cc.cc_by_nd?.requirement || "Attribution + no derivatives", url: "https://creativecommons.org/licenses/by-nd/4.0/deed.de" },
     "CC BY-NC-ND 4.0":{ erlaubt: cc.cc_by_nc_nd?.allowed || "Share only", bedingung: cc.cc_by_nc_nd?.requirement || "Attribution + non-commercial + no derivatives", url: "https://creativecommons.org/licenses/by-nc-nd/4.0/deed.de" },
-    "CC0 1.0 (Public Domain)": { erlaubt: cc.cc0?.allowed || "Everything – no restrictions", bedingung: cc.cc0?.requirement || "No conditions (Public Domain)", url: "https://creativecommons.org/publicdomain/zero/1.0/deed.de" },
-    "All Rights Reserved":     { erlaubt: cc.all_rights?.allowed || "No free use", bedingung: cc.all_rights?.requirement || "All rights reserved", url: null },
+    // CC0 1.0 (an explicit rights waiver) and plain Public Domain (a legal
+    // status) are deliberately separate entries — Public Domain has no CC URL.
+    "CC0 1.0":             { erlaubt: cc.cc0?.allowed || "Broad free use", bedingung: cc.cc0?.requirement || "CC0 waiver / fallback license", url: "https://creativecommons.org/publicdomain/zero/1.0/deed.de" },
+    "Public Domain":       { erlaubt: cc.public_domain?.allowed || "Use as permitted by applicable law", bedingung: cc.public_domain?.requirement || "Verify public-domain status and any additional rights", url: null },
+    "All Rights Reserved": { erlaubt: cc.all_rights?.allowed || "No free use", bedingung: cc.all_rights?.requirement || "All rights reserved", url: null },
   };
 }
 

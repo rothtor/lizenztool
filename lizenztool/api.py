@@ -5,8 +5,9 @@ import os
 import re
 import socket
 import urllib.request
+from functools import lru_cache
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
@@ -154,19 +155,63 @@ class FetchUrlRequest(BaseModel):
     url: str
 
 
-_FLICKR_LICENSES: dict[str, str] = {
-    "0": "All Rights Reserved",
-    "1": "CC BY-NC-SA 4.0",
-    "2": "CC BY-NC 4.0",
-    "3": "CC BY-NC-ND 4.0",
-    "4": "CC BY 4.0",
-    "5": "CC BY-SA 4.0",
-    "6": "CC BY-ND 4.0",
-    "7": "CC0 1.0 (Public Domain)",
-    "8": "CC0 1.0 (Public Domain)",
-    "9": "CC0 1.0 (Public Domain)",
-    "10": "CC0 1.0 (Public Domain)",
-}
+# Canonical Creative Commons deed URLs carry the exact version of a license.
+# Deriving the short code from the URL is a pure re-spelling of what the source
+# said ("…/licenses/by/2.0/" -> "CC BY 2.0"); it never upgrades a version and
+# never turns a public-domain mark into CC0.
+_CC_LICENSE_RE = re.compile(
+    r"^https?://creativecommons\.org/licenses/([a-z-]+)/(\d+\.\d+)/?", re.I
+)
+_CC_PUBLICDOMAIN_RE = re.compile(
+    r"^https?://creativecommons\.org/publicdomain/(zero|mark)/(\d+\.\d+)/?", re.I
+)
+
+
+def _cc_label_from_url(url: str) -> str:
+    """Return the exact CC short code encoded in a canonical CC URL, else ""."""
+    if not url:
+        return ""
+    m = _CC_LICENSE_RE.match(url.strip())
+    if m:
+        return f"CC {m.group(1).upper()} {m.group(2)}"
+    m = _CC_PUBLICDOMAIN_RE.match(url.strip())
+    if m:
+        kind, version = m.group(1).lower(), m.group(2)
+        # CC0 and the Public Domain Mark are distinct instruments and must stay so.
+        return f"CC0 {version}" if kind == "zero" else f"Public Domain Mark {version}"
+    return ""
+
+
+@lru_cache(maxsize=8)
+def _flickr_license_table(api_key: str) -> dict[str, tuple[str, str]]:
+    """Flickr license ID -> (official name, license URL), straight from the API.
+
+    Resolving IDs through flickr.photos.licenses.getInfo keeps the exact license
+    Flickr reports (including its version). Cached because the list is static.
+    """
+    params = urlencode({
+        "method": "flickr.photos.licenses.getInfo",
+        "api_key": api_key,
+        "format": "json",
+        "nojsoncallback": "1",
+    })
+    req = urllib.request.Request(
+        f"https://api.flickr.com/services/rest/?{params}",
+        headers={"User-Agent": "Lizenztool/1.0"},
+    )
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        data = json.loads(resp.read())
+    if data.get("stat") != "ok":
+        raise RuntimeError(data.get("message") or "Flickr license lookup failed")
+
+    result: dict[str, tuple[str, str]] = {}
+    for item in data.get("licenses", {}).get("license", []):
+        license_id = str(item.get("id", "")).strip()
+        name = str(item.get("name") or "").strip()
+        license_url = str(item.get("url") or "").strip()
+        if license_id and name:
+            result[license_id] = (name, license_url)
+    return result
 
 
 @app.get("/api/presets")
@@ -216,11 +261,14 @@ async def flickr_meta(request: Request, body: FlickrMetaRequest) -> dict:
     if len(photo_id) > MAX_ID_LEN or not photo_id.isdigit():
         raise HTTPException(422, "Invalid Flickr photo ID")
 
-    api_url = (
-        f"https://api.flickr.com/services/rest/"
-        f"?method=flickr.photos.getInfo&api_key={key}"
-        f"&photo_id={photo_id}&format=json&nojsoncallback=1"
-    )
+    params = urlencode({
+        "method": "flickr.photos.getInfo",
+        "api_key": key,
+        "photo_id": photo_id,
+        "format": "json",
+        "nojsoncallback": "1",
+    })
+    api_url = f"https://api.flickr.com/services/rest/?{params}"
     try:
         req = urllib.request.Request(api_url, headers={"User-Agent": "Lizenztool/1.0"})
         with urllib.request.urlopen(req, timeout=8) as resp:
@@ -236,12 +284,33 @@ async def flickr_meta(request: Request, body: FlickrMetaRequest) -> dict:
     photo = data["photo"]
     owner = photo.get("owner", {})
     author = owner.get("realname") or owner.get("username", "")
-    license_id = str(photo.get("license", "0"))
-    license_name = _FLICKR_LICENSES.get(license_id, "All Rights Reserved")
+    license_id = str(photo.get("license", "")).strip()
+
+    # Resolve the ID through Flickr's own license list. An unknown ID or a failed
+    # lookup must NOT fall back to "All Rights Reserved" or to any CC license —
+    # the missing information is handed to the UI instead.
+    official_name = license_url = ""
+    try:
+        official_name, license_url = _flickr_license_table(key)[license_id]
+    except (KeyError, OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+        logger.warning("Flickr license unresolved for id %r: %s", _safe_log(license_id), exc)
+
+    # Prefer the exact short code encoded in the license URL (e.g. "CC BY 2.0");
+    # otherwise keep Flickr's official wording verbatim.
+    license_name = _cc_label_from_url(license_url) or official_name
+
     date_taken = photo.get("dates", {}).get("taken", "")
     year = date_taken[:4] if date_taken else ""
 
-    return {"author": author, "year": year, "license": license_name}
+    return {
+        "author": author,
+        "year": year,
+        "license": license_name,
+        "license_url": license_url,
+        "license_id": license_id,
+        "license_name_official": official_name,
+        "rights_check_required": not license_name,
+    }
 
 
 class DvidsMetaRequest(BaseModel):
@@ -282,7 +351,18 @@ async def dvids_meta(request: Request, body: DvidsMetaRequest) -> dict:
     date_raw = data.get("date", "")
     year = date_raw[:4] if date_raw else ""
 
-    return {"author": author, "year": year, "license": "CC0 1.0 (Public Domain)"}
+    # The DVIDS asset API carries no per-asset copyright status. Most DVIDS
+    # material is a U.S. Government work, but that is not guaranteed for every
+    # asset (contractor, coalition-partner and third-party imagery appear too),
+    # so no license is asserted here — the UI asks the user to check the notice.
+    return {
+        "author": author,
+        "year": year,
+        "license": "",
+        "license_url": "",
+        "rights_check_required": True,
+        "source_url": str(data.get("url") or ""),
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
