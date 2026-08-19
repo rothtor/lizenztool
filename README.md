@@ -223,12 +223,14 @@ The configuration file is automatically reloaded at runtime when it changes on t
 # Install dependencies (including test tools)
 pip install -e ".[dev]"
 
-# Check types
-mypy lizenztool/
-
-# Syntax check
-python -m py_compile lizenztool/*.py
+# Syntax check (what CI runs)
+python -m compileall -q lizenztool
 ```
+
+CI (`.github/workflows/ci.yml`) runs on every push and pull request: checkout,
+install `.[dev]`, `python -m compileall`, then `pytest`. Docker publishing and
+the Railway deploy both depend on this same test job — neither runs if the
+tests fail.
 
 ### Testing
 
