@@ -5,10 +5,17 @@ services:
     environment:
       MAX_UPLOAD_MB: "20"
       LOG_LEVEL: "INFO"
+      # Caddy reaches this container over the "internal" network below, not
+      # over loopback (the Dockerfile default of 127.0.0.1 would leave Caddy
+      # untrusted here and every client would be rate-limited as one IP).
+      # The network has a fixed subnet precisely so this value is stable.
+      FORWARDED_ALLOW_IPS: "172.28.0.0/24"
     volumes:
       - ./lizenztool.toml:/app/lizenztool.toml:ro
     expose:
       - "8000"
+    networks:
+      - internal
 
   caddy:
     image: caddy:2-alpine
@@ -21,6 +28,14 @@ services:
       - caddy_config:/config
     depends_on:
       - app
+    networks:
+      - internal
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
 
 volumes:
   caddy_data:

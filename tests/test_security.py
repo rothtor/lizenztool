@@ -69,7 +69,6 @@ class TestSSRFProtection:
         """Allow public IPs (e.g. 1.1.1.1 = Cloudflare DNS)."""
         assert _is_ssrf_target("1.1.1.1") is False
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite")
     @patch("lizenztool.api._safe_opener.open")
     def test_ssrf_blocks_redirect_to_private_ip(self, mock_open, client):
         """Block redirects to private IPs (TOCTOU: DNS rebinding)."""
@@ -85,37 +84,31 @@ class TestSSRFProtection:
 class TestInputValidation:
     """Test input validation and injection prevention."""
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     def test_fetch_url_rejects_empty_url(self, client):
         """Reject empty URL."""
         response = client.post("/fetch-url", json={"url": ""})
         assert response.status_code == 422
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     def test_fetch_url_rejects_no_scheme(self, client):
         """Reject URLs without http/https scheme."""
         response = client.post("/fetch-url", json={"url": "example.com/image.jpg"})
         assert response.status_code == 422
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     def test_fetch_url_rejects_file_scheme(self, client):
         """Block file:// URLs (local file access)."""
         response = client.post("/fetch-url", json={"url": "file:///etc/passwd"})
         assert response.status_code == 422
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     def test_fetch_url_rejects_ftp_scheme(self, client):
         """Block ftp:// URLs."""
         response = client.post("/fetch-url", json={"url": "ftp://files.example.com/image.jpg"})
         assert response.status_code == 422
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     def test_fetch_url_rejects_gopher_scheme(self, client):
         """Block gopher:// URLs."""
         response = client.post("/fetch-url", json={"url": "gopher://old.example.com"})
         assert response.status_code == 422
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     def test_fetch_url_max_length_boundary(self, client):
         """Reject URLs exceeding MAX_FETCH_URL_LEN."""
         from lizenztool.api import MAX_FETCH_URL_LEN
@@ -181,7 +174,6 @@ class TestInputValidation:
 class TestContentTypeValidation:
     """Test content-type and file-type enforcement."""
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     @patch("lizenztool.api._safe_opener.open")
     def test_rejects_html_as_image(self, mock_open, client):
         """Reject HTML served with image/* MIME type (MIME sniffing attack)."""
@@ -194,7 +186,6 @@ class TestContentTypeValidation:
         response = client.post("/fetch-url", json={"url": "http://example.com/evil.jpg"})
         assert response.status_code == 415  # Unsupported media type
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     @patch("lizenztool.api._safe_opener.open")
     def test_rejects_svg_xml_as_image(self, mock_open, client):
         """Reject SVG with potential XXE or script injection."""
@@ -208,7 +199,6 @@ class TestContentTypeValidation:
         # SVG not in allowed list
         assert response.status_code == 415
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     @patch("lizenztool.api._safe_opener.open")
     def test_rejects_pdf_as_image(self, mock_open, client):
         """Reject PDF."""
@@ -221,7 +211,6 @@ class TestContentTypeValidation:
         response = client.post("/fetch-url", json={"url": "http://example.com/doc.pdf"})
         assert response.status_code == 415
 
-    @pytest.mark.skip(reason="Rate limiting interference in test suite; tested via test_api_endpoints.py")
     @patch("lizenztool.api._safe_opener.open")
     def test_magic_bytes_validation_rejects_non_image(self, mock_open, client):
         """Reject file with invalid magic bytes (even if Content-Type says image)."""
@@ -266,37 +255,68 @@ class TestFileSizeValidation:
 
 
 class TestRateLimiting:
-    """Test rate limiting on sensitive endpoints."""
+    """Rate limiting is verified by actually hitting the limit, not by
+    inspecting decorators — a decorator can be present and still not fire."""
 
-    def test_fetch_url_has_rate_limit(self):
-        """Verify /fetch-url is rate limited."""
-        from lizenztool.api import app
+    FETCH_URL_LIMIT = 20   # /fetch-url is declared as 20/minute
+    META_LIMIT      = 30   # /flickr-meta and /dvids-meta are 30/minute
 
-        # Check that the endpoint has rate limit decorator
-        for route in app.routes:
-            if hasattr(route, 'path') and route.path == '/fetch-url':
-                # The route should have the limiter applied
-                assert hasattr(route, 'dependencies') or hasattr(route, '__wrapped__')
-                # If this passes, rate limiting is configured
-                break
+    def test_fetch_url_returns_429_after_the_limit(self, client):
+        """The allowed requests go through, the next one is rejected with 429."""
+        # Requests that are refused for other reasons still consume budget, so
+        # use an SSRF-blocked URL: cheap, no network, and counted.
+        payload = {"url": "http://127.0.0.1/image.jpg"}
 
-    def test_flickr_meta_has_rate_limit(self):
-        """Verify /flickr-meta is rate limited (30/minute)."""
-        from lizenztool.api import app
+        for i in range(self.FETCH_URL_LIMIT):
+            resp = client.post("/fetch-url", json=payload)
+            assert resp.status_code != 429, f"limit hit early on request {i + 1}"
 
-        for route in app.routes:
-            if hasattr(route, 'path') and route.path == '/flickr-meta':
-                assert hasattr(route, 'dependencies') or hasattr(route, '__wrapped__')
-                break
+        resp = client.post("/fetch-url", json=payload)
+        assert resp.status_code == 429
 
-    def test_dvids_meta_has_rate_limit(self):
-        """Verify /dvids-meta is rate limited (30/minute)."""
-        from lizenztool.api import app
+    def test_fetch_url_budget_is_restored_after_reset(self, client):
+        """Sanity check on the fixture: each test really does start fresh."""
+        payload = {"url": "http://127.0.0.1/image.jpg"}
+        for _ in range(self.FETCH_URL_LIMIT + 1):
+            client.post("/fetch-url", json=payload)
+        assert client.post("/fetch-url", json=payload).status_code == 429
 
-        for route in app.routes:
-            if hasattr(route, 'path') and route.path == '/dvids-meta':
-                assert hasattr(route, 'dependencies') or hasattr(route, '__wrapped__')
-                break
+        from lizenztool.api import limiter
+        limiter.reset()
+        assert client.post("/fetch-url", json=payload).status_code == 422
+
+    @patch("lizenztool.api.cfg")
+    def test_flickr_meta_returns_429_after_the_limit(self, mock_cfg, client):
+        from lizenztool.config import AppConfig
+        mock_cfg.return_value = AppConfig()
+        mock_cfg.return_value.integrations.flickr_api_key = "test_key"
+
+        payload = {"photo_id": "not-numeric"}  # rejected at 422, still counted
+        for i in range(self.META_LIMIT):
+            assert client.post("/flickr-meta", json=payload).status_code != 429, i
+
+        assert client.post("/flickr-meta", json=payload).status_code == 429
+
+    @patch("lizenztool.api.cfg")
+    def test_dvids_meta_returns_429_after_the_limit(self, mock_cfg, client):
+        from lizenztool.config import AppConfig
+        mock_cfg.return_value = AppConfig()
+        mock_cfg.return_value.integrations.dvids_api_key = "test_key"
+
+        payload = {"asset_id": "not-numeric"}
+        for i in range(self.META_LIMIT):
+            assert client.post("/dvids-meta", json=payload).status_code != 429, i
+
+        assert client.post("/dvids-meta", json=payload).status_code == 429
+
+    def test_rate_limit_is_keyed_on_the_connection_peer(self, client):
+        """A spoofed X-Forwarded-For must not buy a fresh budget."""
+        payload = {"url": "http://127.0.0.1/image.jpg"}
+        for _ in range(self.FETCH_URL_LIMIT + 1):
+            client.post("/fetch-url", json=payload)
+
+        resp = client.post("/fetch-url", json=payload, headers={"X-Forwarded-For": "203.0.113.99"})
+        assert resp.status_code == 429
 
 
 class TestLoggingSecuritySanitization:

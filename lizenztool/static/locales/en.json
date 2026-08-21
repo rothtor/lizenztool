@@ -38,9 +38,9 @@
     "minimal": "Minimal",
     "standard": "Standard",
     "exif_always_stripped": "EXIF metadata is always removed on export.",
-    "keep_exif": "Keep original metadata",
-    "exif_stripped_hint": "EXIF/metadata is removed on export.",
-    "exif_kept_hint": "Original metadata is preserved (may include GPS/camera).",
+    "keep_exif": "Keep EXIF/XMP where possible",
+    "exif_stripped_hint": "EXIF/XMP metadata is removed on export.",
+    "exif_kept_hint": "Carries over the metadata the browser can copy — the EXIF and XMP blocks of JPEG and PNG files (may include GPS/camera data). Other blocks and other formats are not preserved; use the CLI for a full copy.",
     "exif_unsupported": "(metadata can't be carried over for this format)",
     "apply_download": "Apply & Download",
     "copy": "Copy",
@@ -70,16 +70,16 @@
     "cc_not_existed": "CC licenses existed from Dec. 2002.",
     "dec_2002": "Dec. 2002",
     "loading_image": "Loading image…",
-    "loading_failed": "Loading failed",
-    "wikimedia_loaded": "Image + Wikimedia metadata loaded.",
-    "flickr_loaded": "Image + Flickr metadata loaded.",
-    "dvids_loaded": "Image + DVIDS metadata loaded.",
     "error_prefix": "Error: ",
     "image_still_loading": "Image is still loading, please wait a moment.",
     "processing_image": "Processing image…",
     "canvas_export_failed": "Error: Canvas export failed.",
     "download_success": "Done! Image is downloading.",
-    "fetch_error": "Error: Could not load image."
+    "fetch_error": "Error: Could not load image.",
+    "license_from_source": "License as reported by the source",
+    "license_check_required": "The license could not be determined reliably — please check the rights notice at the source.",
+    "dvids_rights_check": "Please check the rights notice of this specific DVIDS asset — DVIDS reports no per-asset license.",
+    "tiff_unsupported": "TIFF is not supported in the browser — the canvas has no TIFF encoder and the file would end up as a JPEG. Please use the CLI (lizenztool image.tif) for TIFF."
   },
   "licenses": {
     "cc_by": "CC BY 4.0",
@@ -88,13 +88,15 @@
     "cc_by_nc_sa": "CC BY-NC-SA 4.0",
     "cc_by_nd": "CC BY-ND 4.0",
     "cc_by_nc_nd": "CC BY-NC-ND 4.0",
-    "cc0": "CC0 1.0 (Public Domain)",
-    "all_rights": "All Rights Reserved"
+    "cc0": "CC0 1.0",
+    "all_rights": "All Rights Reserved",
+    "public_domain": "Public Domain"
   },
   "cc": {
     "version_title": "ℹ Creative Commons 4.0",
-    "version_description": "This app uses CC 4.0 licenses. Older content may be under CC 2.0 or 3.0.",
-    "version_note": "Check the publication date of the original work."
+    "version_description": "Licenses are taken exactly as the source states them. Older works may be under CC 1.0, 2.0, 2.5 or 3.0 — those versions are kept, not upgraded.",
+    "version_note": "Check the publication date of the original work.",
+    "derived_summary_note": "Plain-language summary based on the 4.0 wording of this license variant. The linked deed for this exact version is authoritative."
   },
   "cc_info": {
     "cc_by": {
@@ -122,12 +124,16 @@
       "requirement": "Attribution + non-commercial + no derivatives"
     },
     "cc0": {
-      "allowed": "Everything – no restrictions",
-      "requirement": "No conditions (Public Domain)"
+      "allowed": "Broad free use",
+      "requirement": "CC0 waiver / fallback license"
     },
     "all_rights": {
       "allowed": "No free use",
       "requirement": "All rights reserved"
+    },
+    "public_domain": {
+      "allowed": "Use as permitted by applicable law",
+      "requirement": "Verify public-domain status and any additional rights"
     }
   },
   "sources": {

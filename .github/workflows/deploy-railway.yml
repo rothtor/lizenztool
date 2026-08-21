@@ -6,14 +6,33 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Railway CLI
+        # Pinned to an exact version instead of @latest so a Railway CLI
+        # release can't silently start running arbitrary new behaviour with
+        # access to RAILWAY_TOKEN. Bump deliberately.
+        run: npm install --global @railway/cli@5.41.2
+
       - name: Deploy to Railway
-        uses: liatrio/github-action-railway@main
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
+        # RAILWAY_SERVICE is optional: a project-scoped RAILWAY_TOKEN with a
+        # single service deploys fine without it. Set the "RAILWAY_SERVICE"
+        # repository variable if the project has more than one service.
+        run: railway up --detach ${RAILWAY_SERVICE:+--service "$RAILWAY_SERVICE"}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}

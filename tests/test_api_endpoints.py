@@ -247,13 +247,17 @@ class TestFlickrMetaEndpoint:
         response = client.post("/flickr-meta", json={"photo_id": ""})
         assert response.status_code == 422
 
+    @patch("lizenztool.api._flickr_license_table")
     @patch("urllib.request.urlopen")
     @patch("lizenztool.api.cfg")
-    def test_flickr_meta_accepts_valid_id(self, mock_cfg, mock_urlopen, client):
-        """Accept valid numeric photo_id."""
+    def test_flickr_meta_accepts_valid_id(self, mock_cfg, mock_urlopen, mock_licenses, client):
+        """Accept valid numeric photo_id and report Flickr's exact license."""
         from lizenztool.config import AppConfig
         mock_cfg.return_value = AppConfig()
         mock_cfg.return_value.integrations.flickr_api_key = "test_key"
+        mock_licenses.return_value = {
+            "4": ("Attribution License", "https://creativecommons.org/licenses/by/2.0/"),
+        }
 
         mock_response = MagicMock()
         mock_response.__enter__.return_value = mock_response
@@ -272,7 +276,10 @@ class TestFlickrMetaEndpoint:
         data = response.json()
         assert data["author"] == "John Doe"
         assert data["year"] == "2023"
-        assert data["license"] == "CC BY 4.0"
+        # Flickr license id 4 is CC BY *2.0* — it must not become CC BY 4.0.
+        assert data["license"] == "CC BY 2.0"
+        assert data["license_url"] == "https://creativecommons.org/licenses/by/2.0/"
+        assert data["rights_check_required"] is False
 
     @patch("urllib.request.urlopen")
     @patch("lizenztool.api.cfg")
@@ -343,7 +350,10 @@ class TestDvidsMetaEndpoint:
         data = response.json()
         assert "John Smith" in data["author"]
         assert data["year"] == "2023"
-        assert data["license"] == "CC0 1.0 (Public Domain)"
+        # DVIDS reports no per-asset rights status: no license may be invented.
+        assert data["license"] == ""
+        assert data["license_url"] == ""
+        assert data["rights_check_required"] is True
 
 
 class TestIndexEndpoint:

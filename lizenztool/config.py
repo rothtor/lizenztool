@@ -25,7 +25,10 @@ class StyleConfig:
 
 @dataclass
 class OutputConfig:
-    filename_pattern: str = "img_{date}-{time}"  # {date}=YYYYMMDD, {time}=HHMM, {n}=random
+    # {date}=YYYYMMDD, {time}=HHMM, {n}=sequential counter within the run
+    # (zero-padded to the width of the batch size). {n} is part of the default
+    # so a batch processed within the same minute cannot collide on one name.
+    filename_pattern: str = "img_{date}-{time}-{n}"
     strip_exif: bool = True                  # remove all metadata from output file
     write_license_meta: bool = False         # write confirmed license back as XMP/IPTC
 
@@ -57,6 +60,7 @@ class AppConfig:
 
 
 def expand_filename(pattern: str, counter: str) -> str:
+    """Expand {n} (sequential counter), {date} (YYYYMMDD) and {time} (HHMM)."""
     now = datetime.now()
     return (
         pattern

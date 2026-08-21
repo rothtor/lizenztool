@@ -36,9 +36,13 @@ padding_ratio = 0.015
 
 [output]
 # Output filename pattern.
-# Placeholders: {date} = YYYYMMDD, {time} = HHMM, {n} = random hex
-# Example: "img_20260611-1923.jpg"
-filename_pattern = "img_{date}-{time}"
+# Placeholders: {date} = YYYYMMDD, {time} = HHMM,
+#               {n}    = sequential counter within the run (1, 2, 3, …),
+#                        zero-padded to the width of the batch size.
+# Example: "img_20260611-1923-1.jpg"
+# Whatever the pattern produces, an existing file is never overwritten:
+# a numeric suffix (-2, -3, …) is appended on collision.
+filename_pattern = "img_{date}-{time}-{n}"
 
 # Remove all EXIF/IPTC/XMP metadata from the output file.
 # Requires exiftool to be installed. Defaults to true for privacy.

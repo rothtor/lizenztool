@@ -465,6 +465,7 @@ input::placeholder { color: #b8c0cc; }
 .s-error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; display: block !important; }
 .s-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; display: block !important; }
 .s-loading { background: #f0f4ff; color: #1e3a6e; border: 1px solid #c7d2fe; display: block !important; }
+.s-warn    { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; display: block !important; }
 
 /* ── Divider ─────────────────────────────────────── */
 .section-divider { height: 1px; background: var(--border); margin: .9rem 0; }
@@ -763,7 +764,7 @@ footer a:hover {
       </svg>
       <span class="dz-hint" data-i18n="ui.drag_or_browse">Drag &amp; Drop oder <label for="file-input" style="cursor:pointer;text-decoration:underline;color:var(--accent)">durchsuchen</label></span>
       <button type="button" id="browse-btn" style="display:none" data-i18n="ui.browse"></button>
-      <input type="file" id="file-input" accept="image/jpeg,image/png,image/tiff,image/webp" hidden>
+      <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden>
     </div>
 
     <div class="or-divider" style="margin:.65rem 0 .55rem" data-i18n="ui.or_url">oder URL</div>
@@ -816,7 +817,8 @@ footer a:hover {
           <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0</option>
           <option value="CC BY-ND 4.0">CC BY-ND 4.0</option>
           <option value="CC BY-NC-ND 4.0">CC BY-NC-ND 4.0</option>
-          <option value="CC0 1.0 (Public Domain)">CC0 1.0 (Public Domain)</option>
+          <option value="CC0 1.0">CC0 1.0</option>
+          <option value="Public Domain">Public Domain</option>
           <option value="All Rights Reserved">All Rights Reserved</option>
         </select>
       </div>
@@ -903,9 +905,9 @@ footer a:hover {
         <label class="exif-toggle">
           <input type="checkbox" id="keep-exif">
           <span class="exif-toggle-track"><span class="exif-toggle-thumb"></span></span>
-          <span data-i18n="ui.keep_exif">Original-Metadaten behalten</span>
+          <span data-i18n="ui.keep_exif">EXIF/XMP soweit möglich behalten</span>
         </label>
-        <p class="hint" id="exif-hint" style="margin:.45rem 0 .6rem" data-i18n="ui.exif_stripped_hint">EXIF-/Metadaten werden beim Export entfernt.</p>
+        <p class="hint" id="exif-hint" style="margin:.45rem 0 .6rem" data-i18n="ui.exif_stripped_hint">EXIF-/XMP-Metadaten werden beim Export entfernt.</p>
         <button type="submit" id="submit-btn" disabled data-i18n="ui.apply_download">Anwenden &amp; Herunterladen</button>
       </div>
       <div id="status"></div>
@@ -938,42 +940,94 @@ const CC_DATA = {
   "CC BY-NC-SA 4.0":{ erlaubt: "Teilen & Bearbeiten",                   bedingung: "Namensnennung + nicht-kommerziell + gleiche Lizenz",      url: "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.de" },
   "CC BY-ND 4.0":   { erlaubt: "Teilen, auch kommerziell",              bedingung: "Namensnennung + keine Bearbeitungen",                     url: "https://creativecommons.org/licenses/by-nd/4.0/deed.de" },
   "CC BY-NC-ND 4.0":{ erlaubt: "Teilen",                                bedingung: "Namensnennung + nicht-kommerziell + keine Bearbeitungen", url: "https://creativecommons.org/licenses/by-nc-nd/4.0/deed.de" },
-  "CC0 1.0 (Public Domain)": { erlaubt: "Alles – keine Einschränkungen", bedingung: "Keine Bedingungen (Gemeinfrei)",                         url: "https://creativecommons.org/publicdomain/zero/1.0/deed.de" },
-  "All Rights Reserved":     { erlaubt: "Keine freie Nutzung",           bedingung: "Alle Rechte beim Urheber",                               url: null },
+  "CC0 1.0":                 { erlaubt: "Weitgehende freie Nutzung",    bedingung: "CC0-Verzichtserklärung / Ersatzlizenz",                    url: "https://creativecommons.org/publicdomain/zero/1.0/deed.de" },
+  "Public Domain":            { erlaubt: "Nutzung nach anwendbarem Recht", bedingung: "Gemeinfreiheit und mögliche Zusatzrechte prüfen",       url: null },
+  "All Rights Reserved":      { erlaubt: "Keine freie Nutzung",          bedingung: "Alle Rechte beim Urheber",                               url: null },
 };
 
+// Deed URLs for the licenses offered in the select. "Public Domain" has no CC
+// URL on purpose — it is a legal status, not a Creative Commons instrument.
 const LICENSE_URLS = {
-  "CC BY 4.0":               "https://creativecommons.org/licenses/by/4.0/",
-  "CC BY-SA 4.0":            "https://creativecommons.org/licenses/by-sa/4.0/",
-  "CC BY-NC 4.0":            "https://creativecommons.org/licenses/by-nc/4.0/",
-  "CC BY-NC-SA 4.0":         "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-  "CC BY-ND 4.0":            "https://creativecommons.org/licenses/by-nd/4.0/",
-  "CC BY-NC-ND 4.0":         "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-  "CC0 1.0 (Public Domain)": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "CC BY 4.0":       "https://creativecommons.org/licenses/by/4.0/",
+  "CC BY-SA 4.0":    "https://creativecommons.org/licenses/by-sa/4.0/",
+  "CC BY-NC 4.0":    "https://creativecommons.org/licenses/by-nc/4.0/",
+  "CC BY-NC-SA 4.0": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "CC BY-ND 4.0":    "https://creativecommons.org/licenses/by-nd/4.0/",
+  "CC BY-NC-ND 4.0": "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+  "CC0 1.0":         "https://creativecommons.org/publicdomain/zero/1.0/",
 };
 
+// Source chips only preselect a license where the source itself defines one for
+// every item (dpa/AFP material is always rights-reserved). Flickr, Wikimedia and
+// DVIDS licenses vary per asset, and an own photo can be published under any
+// license the author picks — guessing one of those would be a legal claim the
+// tool has no basis for, so those sources set no license at all.
 const SOURCES = {
   twitter:   { license: null, placeholderKey: "sources.twitter_placeholder" },
   instagram: { license: null, placeholderKey: "sources.instagram_placeholder" },
-  flickr:    { license: "CC BY 4.0",          placeholderKey: "sources.flickr_placeholder" },
-  wikimedia: { license: "CC BY-SA 4.0",       placeholderKey: "sources.wikimedia_placeholder" },
-  dpa:       { license: "All Rights Reserved",       placeholderKey: "sources.dpa_placeholder" },
-  dvids:     { license: "CC0 1.0 (Public Domain)",   placeholderKey: "sources.dvids_placeholder" },
-  own:       { license: "CC BY 4.0",                 placeholderKey: "sources.own_placeholder" },
+  flickr:    { license: null, placeholderKey: "sources.flickr_placeholder" },
+  wikimedia: { license: null, placeholderKey: "sources.wikimedia_placeholder" },
+  dpa:       { license: "All Rights Reserved", placeholderKey: "sources.dpa_placeholder" },
+  dvids:     { license: null, placeholderKey: "sources.dvids_placeholder" },
+  own:       { license: null, placeholderKey: "sources.own_placeholder" },
 };
 
+// ── Dynamic license options ───────────────────────
+// External sources report licenses the static select does not list (CC BY 2.0,
+// CC BY-SA 3.0, …). Such a license is inserted verbatim instead of being mapped
+// onto a listed one; name and URL stay separate values.
+function clearSourceLicenseOptions() {
+  selLicense.querySelector("optgroup[data-from-source]")?.remove();
+}
+
+function ensureLicenseOption(name, url) {
+  const value = String(name || "").trim();
+  if (!value) return false;
+  let opt = [...selLicense.options].find(o => o.value === value);
+  if (!opt) {
+    let group = selLicense.querySelector("optgroup[data-from-source]");
+    if (!group) {
+      group = document.createElement("optgroup");
+      group.dataset.fromSource = "1";
+      group.label = t("ui.license_from_source", "From source");
+      selLicense.appendChild(group);
+    }
+    opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = value;
+    group.appendChild(opt);
+  }
+  if (url) opt.dataset.licenseUrl = url;
+  return true;
+}
+
+// Adopt exactly what the source reported: exact license name, exact URL.
+function applySourceLicense(name, url) {
+  if (!ensureLicenseOption(name, url)) {
+    selLicense.value = "";
+    urlHidden.value  = "";
+    return false;
+  }
+  selLicense.value = String(name).trim();
+  urlHidden.value  = url || LICENSE_URLS[selLicense.value] || _historicLicenseUrl(selLicense.value);
+  return true;
+}
+
 // ── License detection from holder string ──────────
+// Tokens are matched and kept as written. The only normalization is the
+// spelling variant "CC0" -> "CC0 1.0" (CC0 only ever had version 1.0); no
+// version is ever upgraded and public domain is never turned into CC0.
 const _LICENSE_TOKENS = [
-  "CC BY-NC-ND 4.0","CC BY-NC-SA 4.0","CC BY-NC-ND 3.0","CC BY-NC-SA 3.0",
-  "CC BY-NC 4.0","CC BY-NC 3.0","CC BY-ND 4.0","CC BY-ND 3.0",
-  "CC BY-SA 4.0","CC BY-SA 3.0","CC BY 4.0","CC BY 3.0",
-  "CC0 1.0","CC0","All Rights Reserved",
+  "CC BY-NC-ND 4.0","CC BY-NC-ND 3.0","CC BY-NC-ND 2.5","CC BY-NC-ND 2.0","CC BY-NC-ND 1.0",
+  "CC BY-NC-SA 4.0","CC BY-NC-SA 3.0","CC BY-NC-SA 2.5","CC BY-NC-SA 2.0","CC BY-NC-SA 1.0",
+  "CC BY-NC 4.0","CC BY-NC 3.0","CC BY-NC 2.5","CC BY-NC 2.0","CC BY-NC 1.0",
+  "CC BY-ND 4.0","CC BY-ND 3.0","CC BY-ND 2.5","CC BY-ND 2.0","CC BY-ND 1.0",
+  "CC BY-SA 4.0","CC BY-SA 3.0","CC BY-SA 2.5","CC BY-SA 2.0","CC BY-SA 1.0",
+  "CC BY 4.0","CC BY 3.0","CC BY 2.5","CC BY 2.0","CC BY 1.0",
+  "CC0 1.0","CC0","Public Domain","All Rights Reserved",
 ];
 const _LICENSE_NORMALIZE = {
-  "CC BY-NC-ND 3.0":"CC BY-NC-ND 4.0","CC BY-NC-SA 3.0":"CC BY-NC-SA 4.0",
-  "CC BY-NC 3.0":"CC BY-NC 4.0","CC BY-ND 3.0":"CC BY-ND 4.0",
-  "CC BY-SA 3.0":"CC BY-SA 4.0","CC BY 3.0":"CC BY 4.0",
-  "CC0":"CC0 1.0 (Public Domain)","CC0 1.0":"CC0 1.0 (Public Domain)",
+  "CC0": "CC0 1.0",
 };
 
 function detectLicenseInHolder(raw) {
@@ -993,13 +1047,7 @@ function applyLicenseDetection(holderValue) {
   const result = detectLicenseInHolder(holderValue);
   if (!result) return false;
   document.getElementById("copyright_holder").value = result.name;
-  const opt = [...selLicense.options].find(o => o.value === result.license);
-  if (opt) {
-    selLicense.value = result.license;
-    urlHidden.value = LICENSE_URLS[result.license] || "";
-  } else {
-    selLicense.value = "";
-  }
+  applySourceLicense(result.license, "");
   return true;
 }
 
@@ -1040,7 +1088,7 @@ fetch("/api/version").then(r => r.json()).then(d => {
 // ── Drop zone ─────────────────────────────────────
 dropzone.addEventListener("dragover",  e => { e.preventDefault(); dropzone.classList.add("dragover"); });
 dropzone.addEventListener("dragleave", ()=> dropzone.classList.remove("dragover"));
-dropzone.addEventListener("drop",      e => { e.preventDefault(); dropzone.classList.remove("dragover"); const f = e.dataTransfer.files[0]; if (f) setFile(f); });
+dropzone.addEventListener("drop",      e => { e.preventDefault(); dropzone.classList.remove("dragover"); const f = e.dataTransfer.files[0]; if (f) setFile(f); });  // setFile refuses TIFF
 dropzone.addEventListener("click",     ()=> fileInput.click());
 browseBtn.addEventListener("click",    e => { e.stopPropagation(); fileInput.click(); });
 fileInput.addEventListener("change",   ()=> { if (fileInput.files[0]) setFile(fileInput.files[0]); });
@@ -1049,13 +1097,41 @@ function resetForm(skipSync = false) {
   document.getElementById("copyright_holder").value = "";
   document.getElementById("copyright_holder").placeholder = t("ui.leave_empty");
   document.getElementById("year").value = new Date().getFullYear();
+  clearSourceLicenseOptions();
   updateLicenseFromValue("");
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   activeSource = null;
   if (!skipSync) syncAll();
 }
 
-function setFile(file, name, keepUrl = false) {
+// ── TIFF guard ────────────────────────────────────
+// Canvas has no TIFF encoder, so a TIFF export would silently become a JPEG.
+// Rather than re-encode the file behind the user's back, TIFF is refused in the
+// browser and pointed at the CLI, which writes real TIFF via Pillow.
+const _TIFF_MIME = new Set(["image/tiff", "image/tif", "image/x-tiff"]);
+
+async function isTiff(file, displayName) {
+  const name = String(displayName || file.name || "").toLowerCase();
+  if (/\.tiff?$/.test(name)) return true;
+  if (_TIFF_MIME.has((file.type || "").toLowerCase())) return true;
+  // Catch files whose name and MIME type say nothing (e.g. dragged-in blobs).
+  try {
+    const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    if (head.length === 4) {
+      const le = head[0] === 0x49 && head[1] === 0x49 && head[2] === 0x2a && head[3] === 0x00;
+      const be = head[0] === 0x4d && head[1] === 0x4d && head[2] === 0x00 && head[3] === 0x2a;
+      if (le || be) return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+async function setFile(file, name, keepUrl = false) {
+  if (await isTiff(file, name)) {
+    setStatus("error", t("ui.tiff_unsupported"));
+    fileInput.value = "";
+    return false;
+  }
   if (!keepUrl) imageUrlInput.value = "";
   if (keepUrl)  fileInput.value = "";
   if (previewObjUrl) { URL.revokeObjectURL(previewObjUrl); previewObjUrl = null; }
@@ -1091,6 +1167,7 @@ function setFile(file, name, keepUrl = false) {
   fetchMetadata(file);
   window.selectedFile = selectedFile;
   window.updateResetButtonState?.();
+  return true;
 }
 
 // ── Wikimedia Commons metadata ────────────────────
@@ -1114,15 +1191,6 @@ function wikimediaFilename(url) {
   return null;
 }
 
-const _LICENSE_NORMALIZE_WM = {
-  "CC BY 1.0": "CC BY 4.0", "CC BY 2.0": "CC BY 4.0", "CC BY 2.5": "CC BY 4.0", "CC BY 3.0": "CC BY 4.0",
-  "CC BY-SA 1.0": "CC BY-SA 4.0", "CC BY-SA 2.0": "CC BY-SA 4.0", "CC BY-SA 2.5": "CC BY-SA 4.0", "CC BY-SA 3.0": "CC BY-SA 4.0",
-  "CC BY-NC 3.0": "CC BY-NC 4.0", "CC BY-ND 3.0": "CC BY-ND 4.0",
-  "CC BY-NC-SA 3.0": "CC BY-NC-SA 4.0", "CC BY-NC-ND 3.0": "CC BY-NC-ND 4.0",
-  "CC0": "CC0 1.0 (Public Domain)", "CC0 1.0": "CC0 1.0 (Public Domain)",
-  "Public Domain": "CC0 1.0 (Public Domain)",
-};
-
 async function fetchWikimediaMetadata(filename) {
   const api = "https://commons.wikimedia.org/w/api.php";
   const params = new URLSearchParams({
@@ -1131,19 +1199,22 @@ async function fetchWikimediaMetadata(filename) {
     prop: "imageinfo", iiprop: "extmetadata",
   });
   const res = await fetch(`${api}?${params}`);
-  if (!res.ok) return;
+  if (!res.ok) return false;
   const data = await res.json();
   const pages = data?.query?.pages;
-  if (!pages) return;
+  if (!pages) return false;
   const page = Object.values(pages)[0];
   const meta = page?.imageinfo?.[0]?.extmetadata;
-  if (!meta) return;
+  if (!meta) return false;
 
   // Strip HTML tags from artist field
   const stripHtml = s => s ? s.replace(/<[^>]+>/g, "").trim() : "";
 
   const artist = stripHtml(meta.Artist?.value || "");
-  const license = meta.LicenseShortName?.value?.trim() || "";
+  // Take Commons' own fields verbatim: "CC BY-SA 3.0" stays "CC BY-SA 3.0" and
+  // "Public Domain" stays public domain — it is never rewritten to CC0.
+  const license    = stripHtml(meta.LicenseShortName?.value || "");
+  const licenseUrl = stripHtml(meta.LicenseUrl?.value || "");
   const dateRaw = (meta.DateTimeOriginal?.value || meta.DateTime?.value || "").trim();
   const year = dateRaw.match(/\b(\d{4})\b/)?.[1] || "";
 
@@ -1155,15 +1226,14 @@ async function fetchWikimediaMetadata(filename) {
     document.getElementById("year").value = year;
     updateLicenseYearHints(year);
   }
+  let licenseResolved = true;
   if (license) {
-    const normalized = _LICENSE_NORMALIZE_WM[license] || license;
-    const opt = [...selLicense.options].find(o => o.value === normalized);
-    if (opt) {
-      selLicense.value = normalized;
-      urlHidden.value = LICENSE_URLS[normalized] || "";
-    } else {
-      selLicense.value = "";
-    }
+    licenseResolved = applySourceLicense(license, licenseUrl);
+  } else {
+    // No license field at all: leave the selection empty rather than guessing.
+    selLicense.value = "";
+    urlHidden.value  = licenseUrl || "";
+    licenseResolved  = false;
   }
 
   // Auto-activate Wikimedia chip
@@ -1172,6 +1242,7 @@ async function fetchWikimediaMetadata(filename) {
   activeSource = "wikimedia";
 
   syncAll();
+  return licenseResolved;
 }
 
 // ── Flickr helpers ────────────────────────────────
@@ -1196,19 +1267,20 @@ async function applyFlickrMetadata(photoId) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ photo_id: photoId }),
   });
-  if (!res.ok) return;
+  if (!res.ok) return false;
   const m = await res.json();
   if (m.author) document.getElementById("copyright_holder").value = m.author;
   if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
-  if (m.license) {
-    const opt = [...selLicense.options].find(o => o.value === m.license);
-    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; }
-    else { selLicense.value = ""; }
-  }
+  // The backend already resolved the ID through Flickr's own license list, so
+  // m.license holds the exact license (e.g. "CC BY 2.0"). If Flickr gave no
+  // usable answer, nothing is preselected.
+  const resolved = m.license ? applySourceLicense(m.license, m.license_url) : false;
+  if (!resolved) { selLicense.value = ""; urlHidden.value = ""; }
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   document.querySelector(".chip[data-src=flickr]")?.classList.add("active");
   activeSource = "flickr";
   syncAll();
+  return resolved && !m.rights_check_required;
 }
 
 // ── DVIDS helpers ─────────────────────────────────
@@ -1229,18 +1301,19 @@ async function applyDvidsMetadata(assetId) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ asset_id: assetId }),
   });
-  if (!res.ok) return;
+  if (!res.ok) return false;
   const m = await res.json();
   if (m.author) document.getElementById("copyright_holder").value = m.author;
   if (m.year) { document.getElementById("year").value = m.year; updateLicenseYearHints(m.year); }
-  if (m.license) {
-    const opt = [...selLicense.options].find(o => o.value === m.license);
-    if (opt) { selLicense.value = m.license; urlHidden.value = LICENSE_URLS[m.license] || ""; }
-  }
+  // DVIDS reports no per-asset rights status, so the API returns an empty
+  // license plus rights_check_required. Only an explicit license is adopted.
+  const resolved = m.license ? applySourceLicense(m.license, m.license_url) : false;
+  if (!resolved) { selLicense.value = ""; urlHidden.value = ""; }
   document.querySelectorAll(".chip[data-src]").forEach(b => b.classList.remove("active"));
   document.querySelector(".chip[data-src=dvids]")?.classList.add("active");
   activeSource = "dvids";
   syncAll();
+  return resolved && !m.rights_check_required;
 }
 
 // ── URL fetch ─────────────────────────────────────
@@ -1282,22 +1355,28 @@ fetchBtn.addEventListener("click", async () => {
     }
     const blob = await res.blob();
     const filename = (wmFilename || fetchUrl.split("/").pop().split("?")[0]) || "image.jpg";
-    setFile(new File([blob], filename, { type: blob.type }), filename, true);
+    const accepted = await setFile(new File([blob], filename, { type: blob.type }), filename, true);
+    if (!accepted) return;  // setFile already reported why (e.g. TIFF)
 
+    // A rights warning must be the last word: never overwrite it with a
+    // generic green success message.
     if (wmFilename) {
-      await fetchWikimediaMetadata(wmFilename);
-      setStatus("success", t("ui.wikimedia_loaded"));
+      const ok = await fetchWikimediaMetadata(wmFilename);
+      if (ok) setStatus("success", t("ui.wikimedia_loaded"));
+      else    setStatus("warn", t("ui.wikimedia_loaded") + " " + t("ui.license_check_required"));
     } else if (flickrId) {
       if (hasFlickrKey) {
-        await applyFlickrMetadata(flickrId);
-        setStatus("success", t("ui.flickr_loaded"));
+        const ok = await applyFlickrMetadata(flickrId);
+        if (ok) setStatus("success", t("ui.flickr_loaded"));
+        else    setStatus("warn", t("ui.flickr_loaded") + " " + t("ui.license_check_required"));
       } else {
         setStatus("success", t("ui.image_loaded") + " " + t("ui.flickr_tip"));
       }
     } else if (dvidsId) {
       if (hasDvidsKey) {
-        await applyDvidsMetadata(dvidsId);
-        setStatus("success", t("ui.dvids_loaded"));
+        const ok = await applyDvidsMetadata(dvidsId);
+        if (ok) setStatus("success", t("ui.dvids_loaded"));
+        else    setStatus("warn", t("ui.dvids_loaded") + " " + t("ui.dvids_rights_check"));
       } else {
         setStatus("success", t("ui.image_loaded") + " " + t("ui.dvids_tip"));
       }
@@ -1416,9 +1495,10 @@ async function fetchMetadata(file) {
       applyLicenseDetection(copyright_holder);
     }
     if (year) { document.getElementById("year").value = year; updateLicenseYearHints(year); }
+    // Adopt the license embedded in the file exactly as written (including its
+    // version); insert it into the select if it is not one of the listed ones.
     if (license_type && selLicense.value === "") {
-      const opt = [...selLicense.options].find(o => o.value === license_type);
-      if (opt) selLicense.value = license_type;
+      applySourceLicense(license_type, license_url);
     }
     if (license_url) urlHidden.value = license_url;
     syncAll();
@@ -1452,7 +1532,9 @@ async function fetchMetadata(file) {
 // ── License change (via select) ──────────────────
 function updateLicenseFromValue(val) {
   selLicense.value = val;
-  if (val) urlHidden.value = LICENSE_URLS[val] || _historicLicenseUrl(val);
+  // A license inserted from an external source carries its own exact URL.
+  const opt = [...selLicense.options].find(o => o.value === val);
+  if (val) urlHidden.value = opt?.dataset.licenseUrl || LICENSE_URLS[val] || _historicLicenseUrl(val);
   else urlHidden.value = "";
 
   syncCcInfo();
@@ -1481,10 +1563,11 @@ document.querySelectorAll(".chip[data-src]").forEach(btn => {
         selLicense.value  = "";
         urlHidden.value   = "";
       } else {
-        const opt = [...selLicense.options].find(o => o.value === data.license);
-        if (opt) { selLicense.value = data.license; urlHidden.value = LICENSE_URLS[data.license] || ""; }
+        applySourceLicense(data.license, LICENSE_URLS[data.license] || "");
       }
       document.getElementById("copyright_holder").placeholder = t(data.placeholderKey) || t("ui.leave_empty");
+      // DVIDS assets carry no machine-readable rights status — say so up front.
+      if (src === "dvids") setStatus("warn", t("ui.dvids_rights_check"));
       syncAll();
     }
   });
@@ -1575,7 +1658,10 @@ document.getElementById("sp-save").addEventListener("click", () => {
 });
 
 // ── Historic CC license helper ────────────────────
-// For values like "CC BY 3.0" derive info + URL from the 4.0 equivalent.
+// For a value like "CC BY 3.0" the *version stays 3.0* — only the plain-language
+// summary is borrowed from the 4.0 wording, and the deed URL points at the exact
+// version. `derived` marks that the summary is an approximation, so the UI can
+// say so instead of implying the 4.0 terms apply.
 function _historicLicenseInfo(val) {
   const m = val.match(/^CC ([A-Z-]+) (\d+\.\d+)$/);
   if (!m) return null;
@@ -1584,7 +1670,11 @@ function _historicLicenseInfo(val) {
   const base = ccData[`CC ${variant} 4.0`];
   if (!base) return null;
   const slug = variant.toLowerCase();
-  return { ...base, url: `https://creativecommons.org/licenses/${slug}/${version}/deed.de` };
+  return {
+    ...base,
+    url: `https://creativecommons.org/licenses/${slug}/${version}/deed.de`,
+    derived: version !== "4.0",
+  };
 }
 
 function _historicLicenseUrl(val) {
@@ -1601,18 +1691,25 @@ function syncCcInfo() {
     return;
   }
   const ccData = getCC_DATA();
+  const optUrl = [...selLicense.options].find(o => o.value === val)?.dataset.licenseUrl || "";
   const d = ccData[val] || _historicLicenseInfo(val);
   if (!d) {
-    ccInfo.innerHTML = t("ui.select_license_details");
-    ccInfo.className = "empty";
+    // A license taken verbatim from a source that we have no summary for:
+    // show the name and its own URL rather than a nearby license's terms.
+    ccInfo.className = "";
+    ccInfo.innerHTML = `<strong>${esc(val)}</strong>
+      <div class="cc-row">${esc(t("ui.license_from_source", "From source"))}</div>
+      ${optUrl ? `<a href="${esc(optUrl)}" target="_blank" rel="noopener">${t("ui.read_full_text")} ↗</a>` : ""}`;
     return;
   }
   ccInfo.className = "";
   const isCC = val.startsWith("CC");
+  const url  = optUrl || d.url;
   ccInfo.innerHTML = `<strong>${esc(val)}</strong>
     <div class="cc-row">${t("ui.allowed")}: <span class="cc-val">${d.erlaubt}</span></div>
     <div class="cc-row">${t("ui.requirement")}: <span class="cc-val">${d.bedingung}</span></div>
-    ${d.url ? `<a href="${d.url}" target="_blank" rel="noopener">${t("ui.read_full_text")} ↗</a>` : ""}
+    ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${t("ui.read_full_text")} ↗</a>` : ""}
+    ${d.derived ? `<div class="cc-note">${t("cc.derived_summary_note")}</div>` : ""}
     ${isCC ? `<div class="cc-note">${t("cc.version_note")}</div>` : ""}`;
 }
 
@@ -1812,7 +1909,7 @@ function syncAll() {
 const _VER_RELEASE = {
   "CC BY 4.0": 2013, "CC BY-SA 4.0": 2013, "CC BY-NC 4.0": 2013,
   "CC BY-NC-SA 4.0": 2013, "CC BY-ND 4.0": 2013, "CC BY-NC-ND 4.0": 2013,
-  "CC0 1.0 (Public Domain)": 2009,
+  "CC0 1.0": 2009,
 };
 
 const _HISTORIC_VARIANTS = ["BY", "BY-SA", "BY-NC", "BY-NC-SA", "BY-ND", "BY-NC-ND"];
@@ -1861,7 +1958,7 @@ function updateLicenseYearHints(yearStr) {
       opt.textContent = `CC ${v} ${hVer}`;
       group.appendChild(opt);
     }
-    const cc0Opt = [...selLicense.options].find(o => o.value === "CC0 1.0 (Public Domain)");
+    const cc0Opt = [...selLicense.options].find(o => o.value === "CC0 1.0");
     if (cc0Opt) selLicense.insertBefore(group, cc0Opt);
     else selLicense.appendChild(group);
   }
@@ -1919,6 +2016,7 @@ window.fullReset = function fullReset() {
   holder.value = "";
   holder.placeholder = t("ui.leave_empty");
   document.getElementById("year").value = new Date().getFullYear();
+  clearSourceLicenseOptions();
   updateLicenseFromValue("");
   selLicense.selectedIndex = 0;
 
@@ -2138,6 +2236,13 @@ form.addEventListener("submit", e => {
 
   const ext      = (selectedFile.name.split(".").pop() || "jpg").toLowerCase();
   const mimeMap  = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+  // Belt and braces: setFile already refuses TIFF, but never let one slip
+  // through here and get silently re-encoded as JPEG.
+  if (ext === "tif" || ext === "tiff") {
+    setStatus("error", t("ui.tiff_unsupported"));
+    submitBtn.disabled = false;
+    return;
+  }
   const mimeType = mimeMap[ext] || "image/jpeg";
   const quality  = mimeType !== "image/png" ? 0.95 : undefined;
   const outExt   = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";

@@ -2,7 +2,8 @@
 
 Lizenztool adds a license overlay to images and optionally writes license metadata (EXIF/IPTC/XMP). It is available as both a **command-line tool** and a **web application**.
 
-Supported formats: JPEG · PNG · TIFF · WebP
+Supported formats: JPEG · PNG · WebP · TIFF (CLI only — the browser canvas has
+no TIFF encoder, so the web UI refuses TIFF instead of silently exporting JPEG)
 
 ---
 
@@ -16,6 +17,59 @@ Supported formats: JPEG · PNG · TIFF · WebP
 - Three style presets (Standard, Minimal, Bold) plus custom configuration
 - Web UI with live canvas preview
 - Rate limiting and SSRF protection for public deployment
+
+---
+
+## License integrity
+
+A license is legal information, so the tool never reinterprets one:
+
+- **Versions are preserved.** `CC BY 2.0` stays `CC BY 2.0`, `CC BY-SA 3.0` stays
+  `CC BY-SA 3.0`. Nothing is silently upgraded to 4.0. Licenses that are not in
+  the dropdown are inserted into it verbatim, with their own URL.
+- **`CC0 1.0` and `Public Domain` are separate states.** CC0 is an explicit
+  rights waiver with its own deed URL; public domain is a legal status and gets
+  no CC URL. Neither is ever mapped onto the other.
+- **Flickr** license IDs are resolved through `flickr.photos.licenses.getInfo`,
+  so the license and version come from Flickr itself, not a hardcoded table.
+- **Wikimedia Commons** licenses are taken from the `LicenseShortName` and
+  `LicenseUrl` fields exactly as returned.
+- **DVIDS** exposes no per-asset rights status, so no license is assigned. The
+  API returns `rights_check_required: true` and the UI asks you to check the
+  rights notice of that specific asset.
+- **Own photos** get no preselected license — the author decides.
+- If a source gives no unambiguous license, the tool sets **no license** rather
+  than guessing one (including never defaulting to `All Rights Reserved`).
+
+---
+
+## Security
+
+- **SSRF protection** validates every A/AAAA record `socket.getaddrinfo()`
+  returns for a host (IPv4 and IPv6), not just the first one, and blocks the
+  whole host if any record is non-global. DNS failures and empty answers block
+  too. The same check runs again on every redirect target, and redirects are
+  restricted to `http`/`https`.
+- The outbound HTTP client resolves each host once and connects to exactly the
+  addresses that were validated (`_safe_create_connection`), closing the gap
+  between the check and the connect for that request. This does **not** fully
+  solve DNS rebinding: an attacker controlling DNS can still return a
+  different, individually-valid answer on a later, separate request within the
+  process's DNS cache TTL. See the docstring on `_resolve_global_addrinfo` in
+  `lizenztool/api.py` for the exact boundary of what is and isn't covered.
+- **Client IP / rate limiting**: the app never reads `X-Forwarded-For` itself —
+  it uses `request.client.host`, which uvicorn rewrites from that header only
+  for peers listed in `--forwarded-allow-ips`. Reading the header directly
+  would let any client reset its own rate-limit bucket by sending a fake value.
+- **Proxy trust** defaults to loopback only (`FORWARDED_ALLOW_IPS=127.0.0.1` in
+  the Dockerfile, uvicorn's own default). The bundled `docker-compose.yml`
+  puts Caddy and the app on a fixed-subnet network and sets
+  `FORWARDED_ALLOW_IPS` to that subnet, since Caddy reaches the app over the
+  Docker network rather than loopback. On Railway or another PaaS, the
+  platform's edge proxy must be configured to pass a trustworthy
+  `X-Forwarded-For` in the first place — this setting only decides whether
+  uvicorn believes it once it arrives, so verify your platform's setup before
+  relying on `request.client.host` for anything security-sensitive.
 
 ---
 
@@ -128,8 +182,16 @@ font_size   = 0          # 0 = proportional to bar height
 [output]
 strip_exif         = true   # remove EXIF from output
 write_license_meta = false  # write license back as XMP/IPTC
-filename_pattern   = "img_{date}-{time}"  # {date}, {time}, {n}
+filename_pattern   = "img_{date}-{time}-{n}"  # {date}=YYYYMMDD, {time}=HHMM, {n}=counter
+```
 
+`{n}` is a sequential counter within the run (1, 2, 3, …), zero-padded to the
+width of the batch size. Regardless of the pattern, an existing file is never
+overwritten — a numeric suffix is appended on collision, so a constant pattern
+such as `filename_pattern = "fixed"` produces `fixed.jpg`, `fixed-2.jpg`,
+`fixed-3.jpg` rather than one repeatedly overwritten file.
+
+```toml
 [integrations]
 # flickr_api_key = "..."
 # dvids_api_key  = "..."
@@ -161,12 +223,14 @@ The configuration file is automatically reloaded at runtime when it changes on t
 # Install dependencies (including test tools)
 pip install -e ".[dev]"
 
-# Check types
-mypy lizenztool/
-
-# Syntax check
-python -m py_compile lizenztool/*.py
+# Syntax check (what CI runs)
+python -m compileall -q lizenztool
 ```
+
+CI (`.github/workflows/ci.yml`) runs on every push and pull request: checkout,
+install `.[dev]`, `python -m compileall`, then `pytest`. Docker publishing and
+the Railway deploy both depend on this same test job — neither runs if the
+tests fail.
 
 ### Testing
 

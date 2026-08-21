@@ -6,12 +6,16 @@ from .metadata import LicenseInfo
 
 console = Console()
 
+# "CC0 1.0" and "Public Domain" are separate states: CC0 is an explicit rights
+# waiver with its own deed URL, plain public domain is a legal status that has
+# none. Never map one onto the other.
 _LICENSE_CHOICES = [
     "CC BY 4.0",
     "CC BY-SA 4.0",
     "CC BY-NC 4.0",
     "CC BY-NC-SA 4.0",
-    "CC0 1.0 (Public Domain)",
+    "CC0 1.0",
+    "Public Domain",
     "All Rights Reserved",
     "Other (type manually)",
 ]
@@ -21,7 +25,7 @@ _LICENSE_URLS = {
     "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
     "CC BY-NC 4.0": "https://creativecommons.org/licenses/by-nc/4.0/",
     "CC BY-NC-SA 4.0": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-    "CC0 1.0 (Public Domain)": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
 }
 
 
